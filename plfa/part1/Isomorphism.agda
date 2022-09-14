@@ -102,11 +102,11 @@ open _≃_
 
 module ≃-Reasoning where
 
-  infix 1 ≃-begin
+  infix 1 ≃-begin_
   infixr 2 _≃⟨_⟩_
   infix 3 _≃-∎
 
-  ≃-begin : ∀ {A B : Set}
+  ≃-begin_ : ∀ {A B : Set}
       -----
     → A ≃ B
       -----
@@ -260,4 +260,5 @@ open _⇔_
     {  to = to B⇔C ∘ to A⇔B
     ;  from = from A⇔B ∘ from B⇔C
     }
+ 
 
