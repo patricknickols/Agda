@@ -107,11 +107,21 @@ trichotomy-m>n : ∀ {m n : ℕ}
 
 trichotomy-m>n m>n = trichotomy-m<n m>n 
 
+×-≡ : {A B : Set} {x₁ x₂ : A} {y₁ y₂ : B}
+    -----------------
+  → x₁ ≡ x₂ → y₁ ≡ y₂
+    ---------------------
+  → (x₁ , y₁) ≡ (x₂ , y₂)
+
+×-≡ refl refl = refl
+
 ⊎-dual-× : ∀ {A B : Set} → ¬ (A ⊎ B) ≃ (¬ A) × (¬ B)
 ⊎-dual-× =
-  record { to = λ x → {!!}
-         ; from = λ x → {!!}
-         ; from∘to = λ x → {!!}
-         ; to∘from = λ x → {!!}
+  record { to = λ ¬[x+y] → (λ x → ¬[x+y] (inj₁ x)) , (λ y → ¬[x+y] (inj₂ y)) 
+         ; from = λ{(¬x , ¬y) (inj₁ x) → ¬x x
+                   ;(¬x , ¬y) (inj₂ y) → ¬y y
+                   }
+         ; from∘to = λ ¬[x+y] → extensionality (λ { (inj₁ x) → refl ; (inj₂ y) → refl })
+         ; to∘from = λ{(¬x , ¬y) → ×-≡ refl refl}
          }
 
