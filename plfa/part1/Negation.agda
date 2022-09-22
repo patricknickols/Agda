@@ -4,7 +4,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym)
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Data.Product using (_×_; _,_)
+open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import plfa.part1.Isomorphism using (_≃_; extensionality)
 open import plfa.part1.Relations using (_<_)
 
@@ -125,3 +125,108 @@ trichotomy-m>n m>n = trichotomy-m<n m>n
          ; to∘from = λ{(¬x , ¬y) → ×-≡ refl refl}
          }
 
+postulate
+  em : ∀ {A : Set} → A ⊎ ¬ A
+
+em-irrefutable : ∀ {A : Set} → ¬ ¬ (A ⊎ ¬ A)
+em-irrefutable k = k (inj₂ λ{x → k (inj₁ x)})
+
+em→double-negation : ∀ {A : Set}
+    -------
+  → A ⊎ ¬ A
+    -----------
+  → (¬ ¬ A → A)
+
+em→double-negation (inj₁ a) _ = a
+em→double-negation (inj₂ ¬a) ¬¬a = ⊥-elim (¬¬a ¬a)
+
+em→peirce : ∀ {A B : Set}
+    -----------------
+  → A ⊎ ¬ A → B ⊎ ¬ B
+    -------------------
+  → (((A → B) → A) → A)
+
+em→peirce (inj₁ a) _ _ = a
+em→peirce (inj₂ ¬a) _ a→b→a = a→b→a (λ a → ⊥-elim (¬a a))
+
+em→implication-disjunction : ∀ {A B : Set}
+    -----------------
+  → A ⊎ ¬ A → B ⊎ ¬ B
+    -------------------
+  → ((A → B) → ¬ A ⊎ B)
+
+em→implication-disjunction (inj₁ a) _ a→b = inj₂ (a→b a)
+em→implication-disjunction (inj₂ ¬a) _ _ = inj₁ ¬a
+
+em→de-morgan : ∀ {A B : Set}
+    -----------------
+  → A ⊎ ¬ A → B ⊎ ¬ B
+    -----------------------
+  → (¬ (¬ A × ¬ B) → A ⊎ B)
+
+em→de-morgan (inj₁ a) _ _ = inj₁ a
+em→de-morgan (inj₂ ¬a) (inj₁ b) _ = inj₂ b
+em→de-morgan (inj₂ ¬a) (inj₂ ¬b) ¬⟨¬a,¬b⟩ = ⊥-elim (¬⟨¬a,¬b⟩ ( ¬a , ¬b ))
+
+de-morgan→em : (∀ {A B : Set}
+    ----------------------
+  → ¬ (¬ A × ¬ B) → A ⊎ B)
+    ------------------- 
+  → {A : Set} → A ⊎ ¬ A 
+
+de-morgan→em dem = dem (λ{ (¬a , ¬¬a) → ¬¬a ¬a})
+
+
+double-negation→em : (∀ {A : Set} 
+    ------------
+  → (¬ ¬ A → A))
+    --------------------
+  → {A : Set} →  A ⊎ ¬ A
+
+double-negation→em dne = dne em-irrefutable 
+
+peirce→em : (∀ {A B : Set}
+    --------------------
+  → (((A → B) → A) → A))
+    -------------------
+  → {A : Set} → A ⊎ ¬ A 
+
+peirce→em peirce = peirce (λ [a+¬a] → ⊥-elim (em-irrefutable [a+¬a]))
+
+implication-disjunction→em : (∀ {A B : Set}
+    -------------------
+  → ((A → B) → ¬ A ⊎ B))
+    -------------------
+  → {A : Set} → A ⊎ ¬ A
+
+⊎-comm-implication : ∀ {A B : Set}
+    -----
+  → A ⊎ B
+    -----
+  → B ⊎ A
+
+⊎-comm-implication (inj₁ a) = inj₂ a
+⊎-comm-implication (inj₂ b) = inj₁ b 
+
+implication-disjunction→em imp-dis = ⊎-comm-implication (imp-dis (λ x → x))
+
+Stable : Set → Set
+Stable A = ¬ ¬ A → A
+
+Stable-¬ : ∀ {A : Set}
+    ------------
+  → Stable (¬ A)
+
+Stable-¬ = ¬¬¬-elim
+
+Stable-× : ∀ {A B : Set}
+    -------------------
+  → Stable A → Stable B
+    --------------
+  → Stable (A × B)
+
+
+Stable-× StableA StableB ¬¬⟨a,b⟩ = (a , b)
+  where
+    a = StableA (λ ¬a → ¬¬⟨a,b⟩ (λ ⟨a,b⟩ → ¬a (proj₁ ⟨a,b⟩)))
+    b = StableB (λ ¬b → ¬¬⟨a,b⟩ (λ ⟨a,b⟩ → ¬b (proj₂ ⟨a,b⟩)))
