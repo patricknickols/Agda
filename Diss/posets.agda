@@ -99,10 +99,6 @@ chain-map chain-A f mon-f = record { chain-fun = λ n → f ((chain-fun chain-A)
                              ; mon = record { mon = λ a≤a′ → (mon mon-f) ((mon (mon chain-A)) a≤a′) }
                              }
 
-lub-from-chain : {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} (c : chain P) → lub c
-
-least-pre-fixed-of : {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} (f : D → D) → least-pre-fixed P f 
-
 record continuous-fun {A B : Set} {_⊑₁_ : A → A → Set} {_⊑₂_ : B → B → Set} (P₁ : poset A _⊑₁_) (P₂ : poset B _⊑₂_) (f : A → B) : Set where
   field
     mon : monotone-fun P₁ P₂ f
@@ -129,7 +125,7 @@ record const-chain {D : Set} {_⊑_ : D → D → Set} (P : poset D _⊑_) : Set
     constant : ∀ (n : ℕ) → chain-fun carrier-chain n ≡ const-value
 open const-chain
   
-const-chain-has-lub : ∀ {D : Set} {_⊑_ : D → D → Set} {f : ℕ → D} (P : poset D _⊑_) (x : const-chain P) → lub (carrier-chain x)
+--const-chain-has-lub : ∀ {D : Set} {_⊑_ : D → D → Set} {f : ℕ → D} (P : poset D _⊑_) (x : const-chain P) → lub (carrier-chain x)
 
 equality-implies-relation : ∀ {D : Set} {_⊑_ : D → D → Set} (P : poset D _⊑_) (d d′ : D) → d ≡ d′ → d ⊑ d′ 
 
@@ -155,28 +151,34 @@ a≡b≤c→a≤c : ∀ {D : Set} {_⊑_ : D → D → Set} {a b c : D} → a �
 
 a≡b≤c→a≤c Eq.refl b≤c = b≤c
 
-lubs-shift-invariant : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥}  (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((lub-from-chain)) c) ≡ lub-element (((lub-from-chain)) c′)
+lubs-shift-invariant : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥}  (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((chain-complete P′)) c) ≡ lub-element (((chain-complete P′)) c′)
 
 
 --(antisymmetric P) (lub2 (lub-of-chain c) λ {n} → a≡b≤c→a≤c {_⊑_ = _⊑_} (x {n}) ((lub1 (lub-of-chain c′)) {k + n})) ((lub2 (lub-of-chain c′) λ {n} → a≡b≤c→a≤c {_⊑_ = _⊑_} (x {n}) ((lub1 (lub-of-chain c)) {k + n})))
 
-lubs-shift-invariant-1 : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((lub-from-chain)) c) ⊑ lub-element (((lub-from-chain)) c′)
+lubs-shift-invariant-1 : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((chain-complete P′)) c) ⊑ lub-element (((chain-complete P′)) c′)
 
-lubs-shift-invariant-2 : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((lub-from-chain)) c′) ⊑ lub-element (((lub-from-chain)) c)
+lubs-shift-invariant-2 : ∀ {D : Set} {_⊑_ : D → D → Set}  {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (c c′ : chain P) → (k : ℕ) → (∀ {n : ℕ} → (chain-fun c) n ≡ (chain-fun c′) (k + n)) → lub-element (((chain-complete P′)) c′) ⊑ lub-element (((chain-complete P′)) c)
 
 
-lubs-shift-invariant-1 {_⊑_ = ≤} {P′ = P′} c c′ k x = lub2 (((lub-from-chain)) c) (λ {n} → a≡b≤c→a≤c {_⊑_ = ≤} (x {n}) (lub1 (((lub-from-chain)) c′) {k + n}))
+lubs-shift-invariant-1 {_⊑_ = ≤} {P′ = P′} c c′ k x = lub2 (((chain-complete P′)) c) (λ {n} → a≡b≤c→a≤c {_⊑_ = ≤} (x {n}) (lub1 (((chain-complete P′)) c′) {k + n}))
 
+n≤sucn : ∀ (n : ℕ) → n ≤ suc n
+n≤sucn zero = _≤_.z≤n
+n≤sucn (suc n) = _≤_.s≤s (n≤sucn n)
 
 n≤n+k : ∀ (n k : ℕ) → n ≤ k + n
---FILL OUT
+n≤n+k zero zero = _≤_.z≤n
+n≤n+k zero (suc k) = _≤_.z≤n
+n≤n+k (suc n) zero = _≤_.s≤s (n≤n+k n zero)
+n≤n+k (suc n) (suc k) = _≤_.s≤s (trans-≤ (n≤sucn n) (n≤n+k (suc n) k))
 
 
 a≤b≡c≤d→a≤d : ∀ {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} {a b c d : D} → a ⊑ b → c ≡ b → c ⊑ d → a ⊑ d
 a≤b≡c≤d→a≤d {P = P} a⊑b Eq.refl c⊑d = (transitive P) a⊑b c⊑d
 
 
-lubs-shift-invariant-2 {_⊑_ = ≤} {P = P} {P′ = P′} c c′ k x = lub2 (((lub-from-chain)) c′) λ {n} → a≤b≡c≤d→a≤d {_⊑_ = ≤} {P = P} (mon (mon c′) (n≤n+k (n) (k))) (x {n}) (lub1 (((lub-from-chain)) c)) 
+lubs-shift-invariant-2 {_⊑_ = ≤} {P = P} {P′ = P′} c c′ k x = lub2 (((chain-complete P′)) c′) λ {n} → a≤b≡c≤d→a≤d {_⊑_ = ≤} {P = P} (mon (mon c′) (n≤n+k (n) (k))) (x {n}) (lub1 (((chain-complete P′)) c)) 
 
 lubs-shift-invariant {_⊑_ = _⊑_} {P = P} {⊥ = ⊥} {P′ = P′} c c′ k x = (antisymmetric P) (lubs-shift-invariant-1 {⊥ = ⊥} {P′ = P′} c c′ k x) (lubs-shift-invariant-2 {⊥ = ⊥} {P′ = P′} c c′ k x)  
 
@@ -211,15 +213,15 @@ tarski-chain ⊥ f P′ cont-fun = record { chain-fun = tarski-chain-fun ⊥ f P
 
 
 
-tarski-lfp-1 : ∀ {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (f : D → D) (cont-fun : continuous-fun P P f) → f (lub-element (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun))) ≡ lub-element (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun))
+tarski-lfp-1 : ∀ {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} (f : D → D) (cont-fun : continuous-fun P P f) → f (lub-element (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun))) ≡ lub-element (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun))
 
 tarski-lfp-1 {⊥ = ⊥} {P′ = P′} f cont-fun =
   begin
-    f (lub-element (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun)))
-  ≡⟨ (lub-preserve cont-fun) (tarski-chain ⊥ f P′ cont-fun) (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun)) (((lub-from-chain)) (chain-map (tarski-chain ⊥ f P′ cont-fun) f (mon cont-fun))) ⟩ 
-    lub-element (((lub-from-chain)) (chain-map (tarski-chain ⊥ f P′ cont-fun) f (mon cont-fun)))
+    f (lub-element (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun)))
+  ≡⟨ (lub-preserve cont-fun) (tarski-chain ⊥ f P′ cont-fun) (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun)) (((chain-complete P′)) (chain-map (tarski-chain ⊥ f P′ cont-fun) f (mon cont-fun))) ⟩ 
+    lub-element (((chain-complete P′)) (chain-map (tarski-chain ⊥ f P′ cont-fun) f (mon cont-fun)))
   ≡⟨(lubs-shift-invariant {⊥ = ⊥} {P′ = P′} (chain-map (tarski-chain ⊥ f P′ cont-fun) f (mon cont-fun)) (tarski-chain ⊥ f P′ cont-fun) 1 Eq.refl) ⟩
-  lub-element (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun))
+  lub-element (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun))
   ∎
 
 tarski-lfp2 : ∀ {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} {⊥ : D} (P′ : domain P ⊥) (f : D → D) (mon-f : monotone-fun P P f) → (d : D) → f d ⊑ d → (n : ℕ) → (iterate n f) ⊥ ⊑ d
@@ -231,8 +233,15 @@ tarski-lfp2 {P = P} P′ f mon-f d fd⊑d (suc n) = transitive P ((mon mon-f) (t
 ≡→⊑ {P = P} {a = a} {b = a} Eq.refl = reflexive P
 
 
-tarski {_⊑_ = ≤} {P = P} ⊥ P′ f cont-fun = record { fixf = lub-element (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun))
-                                ; lfp1 = record { pre-fix =  ≡→⊑ {_⊑_ = ≤} {P = P} (tarski-lfp-1 {⊥ = ⊥} {P′ = P′} f cont-fun) }
-                                ; lfp2 = λ {d} fd⊑d → lub2 (((lub-from-chain)) (tarski-chain ⊥ f P′ cont-fun)) {d} (λ {n} → (tarski-lfp2 P′ f (mon cont-fun) d fd⊑d) n)
-                                }
-                            
+tarski {_⊑_ = ≤} {P = P} ⊥ P′ f cont-fun = record { fixf = lub-element (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun))
+                                                  ; lfp1 = record { pre-fix =  ≡→⊑ {_⊑_ = ≤} {P = P} (tarski-lfp-1 {⊥ = ⊥} {P′ = P′} f cont-fun) }
+                                                  ; lfp2 = λ {d} fd⊑d → lub2 (((chain-complete P′)) (tarski-chain ⊥ f P′ cont-fun)) {d} (λ {n} → (tarski-lfp2 P′ f (mon cont-fun) d fd⊑d) n)
+                                                  }
+
+
+
+--canonical-ordering : ∀ (D : Set) → (D → D) → (D → D) → Set
+
+--function-cpo : ∀ {D D′ : Set} {_⊑_ : D → D → Set} {_⊑′_ : D′ → D′ → Set} {P : poset D _⊑_} {P′ : poset D′ _⊑′_} → poset (D → E)  
+
+--tarski-continuous : ∀ {D : Set} {_⊑_ : D → D → Set} {g : D → D} {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} → continuous-fun (function-domain D) P (λ (f : continuous-fun P P g) → tarski ⊥ P′ g f)
