@@ -6,12 +6,13 @@ open Eq using (_≡_)
 open import Data.Nat using (ℕ; zero; suc; _≤_; _+_)
 open import Data.Product
 
-record poset (A : Set) (⊑ : A → A → Set) : Set where
+record poset (A : Set) (_⊑_ : A → A → Set) : Set where
   field
-    reflexive     : ∀ {a : A} → ⊑ a a 
-    antisymmetric : ∀ {a b : A} → (⊑ a b) → (⊑ b a) → a ≡ b
-    transitive    : ∀ {a b c : A} → (⊑ a b) → (⊑ b c) → (⊑ a c)
+    reflexive     : ∀ {a : A} → a ⊑ a 
+    antisymmetric : ∀ {a b : A} → (a ⊑ b) → (b ⊑ a) → a ≡ b
+    transitive    : ∀ {a b c : A} → (a ⊑ b) → (b ⊑ c) → (a ⊑ c)
 open poset
+
 
 refl-≤ : ∀ {n : ℕ} → n ≤ n
 antisym-≤ : ∀ {n m : ℕ} → n ≤ m → m ≤ n → n ≡ m
@@ -32,6 +33,11 @@ nats = record { reflexive = refl-≤
               ; antisymmetric = antisym-≤ 
               ; transitive = trans-≤ 
               }
+
+_∘_ : ∀ {A B C : Set} → (B → C) → (A → B) → (A → C)
+
+(f ∘ g) x = f (g x) 
+
 
 record monotone {A B : Set} {_⊑₁_ : A → A → Set} {_⊑₂_ : B → B → Set} (P₁ : poset A _⊑₁_) (P₂ : poset B _⊑₂_) : Set where
   field
@@ -261,7 +267,7 @@ tarski-lfp-1 {⊥ = ⊥} {P′ = P′} f cont-fun =
   ≡⟨ (lub-preserve cont-fun) (fⁿ⊥) (⋃ (fⁿ⊥)) (⋃ ffⁿ⊥) ⟩ 
     lub-element (⋃ ffⁿ⊥)
   ≡⟨(lubs-shift-invariant {⊥ = ⊥} {P′ = P′} (ffⁿ⊥) (fⁿ⊥) 1 Eq.refl) ⟩
-  lub-element (⋃ fⁿ⊥)
+    lub-element (⋃ fⁿ⊥)
   ∎
 
 tarski-lfp2 :
@@ -287,9 +293,15 @@ tarski {_⊑_ = ≤} {P = P} ⊥ P′ f cont-fun =
          }
 
 
---canonical-ordering : ∀ {D D′ : Set} {_⊑_ : D → D → Set} {_⊑′_ : D′ → D′ → Set} {P : poset D _⊑_} {P′ : poset D′ _⊑′_} → ((D → D′) → (D → D′) → Set)  
+canonical-ordering : ∀ {D D′ : Set} {_⊑_ : D → D → Set} {_⊑′_ : D′ → D′ → Set} {P : poset D _⊑_} {P′ : poset D′ _⊑′_} → ((D → D′) → (D → D′) → Set)  
+
+--data _⊏_ : {D : Set} {_⊑_ : D → D → Set} {P : poset D _⊑_} (f : D → D) → (g : D → D) → Set where
+
+--  f⊏g : ∀ {d : D} → f d ⊑ g d
+          -------------------
+--          → f ⊏ g
 
 
---tarski-continuous : ∀ {D : Set} {_⊑_ : D → D → Set} {g : D → D} {P : poset D _⊑_} {⊥ : D} {P′ : domain P ⊥} → continuous-fun (function-domain D) P (λ (f : continuous-fun P P g) → tarski ⊥ P′ g f)
 
---least-pre-fixed-is-cont : ∀ {D : Set} {_⊑_ : D → D → Set} (P : poset D _⊑_) (P′ : poset (P → P)  → continuous-fun (least-pre-fixed-of () P)
+
+
