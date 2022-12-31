@@ -3,22 +3,22 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
 open Eq using (_≡_)
 
-open import Data.Nat using (ℕ; zero; suc; _≤_; _+_)
+open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; s≤s; z≤n)
 open import Data.Product using (_×_; _,_)
 
 refl-≤ : ∀ {n : ℕ} → n ≤ n
 antisym-≤ : ∀ {n m : ℕ} → n ≤ m → m ≤ n → n ≡ m
 trans-≤ : ∀ {m n p : ℕ} → m ≤ n → n ≤ p → m ≤ p
 
-refl-≤ {zero} = _≤_.z≤n
-refl-≤ {suc n} = _≤_.s≤s (refl-≤ {n})
+refl-≤ {zero} = z≤n
+refl-≤ {suc n} = s≤s (refl-≤ {n})
 
-antisym-≤ _≤_.z≤n _≤_.z≤n = Eq.refl
-antisym-≤ (_≤_.s≤s n≤m) (_≤_.s≤s m≤n) = Eq.cong suc (antisym-≤ n≤m m≤n)
+antisym-≤ z≤n z≤n = Eq.refl
+antisym-≤ (s≤s n≤m) (s≤s m≤n) = Eq.cong suc (antisym-≤ n≤m m≤n)
 
-trans-≤ _≤_.z≤n _≤_.z≤n = _≤_.z≤n
-trans-≤ _≤_.z≤n (_≤_.s≤s n≤p) = _≤_.z≤n
-trans-≤ (_≤_.s≤s m≤n) (_≤_.s≤s n≤p) = _≤_.s≤s (trans-≤ m≤n n≤p)
+trans-≤ z≤n z≤n = z≤n
+trans-≤ z≤n (s≤s n≤p) = z≤n
+trans-≤ (s≤s m≤n) (s≤s n≤p) = s≤s (trans-≤ m≤n n≤p)
 
 record poset2 : Set₁ where
   field
@@ -74,13 +74,7 @@ chain-map-2 P≤ Q≤ chain-P monotone-f = record { monotone =
                                                      ; mon = λ a≤a′ → mon monotone-f (mon (chain-2.monotone chain-P) a≤a′)
                                                      }
                                               }
-
-record continuous-fun-2 (P≤ : poset2) (Q≤ : poset2) : Set where
-  field
-    mon : monotone-fun-2 P≤ Q≤ 
-    lub-preserve : ∀ (c : chain-2 P≤) (⋃₁ : lub-2 c) (⋃₂ : lub-2 (chain-map-2 P≤ Q≤ c mon)) → (g mon) (⊔ ⋃₁) ≡ ⊔ ⋃₂
-open continuous-fun-2
-
+                                              
 record least-element-2 (P≤ : poset2) : Set where
   field
     ⊥ : A P≤
@@ -112,47 +106,30 @@ record least-pre-fixed-2 (P≤ : poset2) (f : A P≤ → A P≤) : Set where
     lfp2 : ∀ {d′ : A P≤} → (R P≤) (f d′) d′ → (R P≤) (d lfp1) d′
 open least-pre-fixed-2
 
-tarski-2 : ∀ (P : domain-2) (cont-fun : continuous-fun-2 (pos P) (pos P)) → least-pre-fixed-2 (domain-2.pos P) (g (mon cont-fun))
+tarski-2 : ∀ (P : domain-2) (cont-fun : cont-fun-on-domains P P) → least-pre-fixed-2 (domain-2.pos P) (g (mon cont-fun))
 
 tarski-chain-fun-2 : ∀ (P : domain-2) (f : A (pos P) → A (pos P)) → ℕ → A (pos P)
 
 tarski-chain-fun-2 P f n = iterate n f (⊥ (bottom P))
 
-tarski-chain-fun-monotonic-2 : (P : domain-2) (cont-fun : continuous-fun-2 (pos P) (pos P)) → {a a′ : ℕ} → a ≤ a′ → (R (pos P)) ((tarski-chain-fun-2 P (g (mon cont-fun))) a) ((tarski-chain-fun-2 P (g (mon cont-fun))) a′)
+tarski-chain-fun-monotonic-2 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → {a a′ : ℕ} → a ≤ a′ → (R (pos P)) ((tarski-chain-fun-2 P (g (mon cont-fun))) a) ((tarski-chain-fun-2 P (g (mon cont-fun))) a′)
  
 tarski-chain-fun-monotonic-2 P cont-fun _≤_.z≤n = ⊥-is-bottom (bottom P)
 tarski-chain-fun-monotonic-2 P cont-fun (_≤_.s≤s m≤n) = (mon (mon cont-fun)) (tarski-chain-fun-monotonic-2 P cont-fun m≤n)
 
 
-tarski-chain-fun-monotonic-3 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → {a a′ : ℕ} → a ≤ a′ → (R (pos P)) ((tarski-chain-fun-2 P (g (mon cont-fun))) a) ((tarski-chain-fun-2 P (g (mon cont-fun))) a′)
- 
-tarski-chain-fun-monotonic-3 P cont-fun _≤_.z≤n = ⊥-is-bottom (bottom P)
-tarski-chain-fun-monotonic-3 P cont-fun (_≤_.s≤s m≤n) = (mon (mon cont-fun)) (tarski-chain-fun-monotonic-3 P cont-fun m≤n)
-
-
-tarski-chain-fun-mon-2 : (P : domain-2) (cont-fun : continuous-fun-2 (pos P) (pos P)) → monotone-fun-2 nats2 (pos P)
+tarski-chain-fun-mon-2 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → monotone-fun-2 nats2 (pos P)
 
 tarski-chain-fun-mon-2 P cont-fun =  record { g = tarski-chain-fun-2 P (g (mon cont-fun))
                                             ; mon = λ a≤a′ → tarski-chain-fun-monotonic-2 P cont-fun a≤a′
                                             }
 
-tarski-chain-fun-mon-3 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → monotone-fun-2 nats2 (pos P)
-
-tarski-chain-fun-mon-3 P cont-fun =  record { g = tarski-chain-fun-2 P (g (mon cont-fun))
-                                            ; mon = λ a≤a′ → tarski-chain-fun-monotonic-3 P cont-fun a≤a′
-                                            }
-
-tarski-chain-2 : (P : domain-2) (cont-fun : continuous-fun-2 (pos P) (pos P)) → chain-2 (pos P)
+tarski-chain-2 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → chain-2 (pos P)
 
 tarski-chain-2 P cont-fun = record { monotone = tarski-chain-fun-mon-2 P cont-fun }
 
-
-tarski-chain-3 : (P : domain-2) (cont-fun : cont-fun-on-domains P P) → chain-2 (pos P)
-
-tarski-chain-3 P cont-fun = record { monotone = tarski-chain-fun-mon-3 P cont-fun }
-
 tarski-lfp-1-2 :
-  ∀ (P : domain-2) (cont-fun : continuous-fun-2 (pos P) (pos P))
+  ∀ (P : domain-2) (cont-fun : cont-fun-on-domains P P)
   → let ⋃ = (chain-complete P) in
     let fⁿ⊥ = (tarski-chain-2 P cont-fun) in
     (g (mon cont-fun)) (⊔ (⋃ fⁿ⊥)) ≡ ⊔ (⋃ fⁿ⊥)
@@ -208,13 +185,14 @@ lubs-shift-invariant P c c′ k x =
 
 tarski-lfp-1-2 P cont-fun =
   let ⋃ = (chain-complete P) in
+  let f = (g (mon cont-fun)) in
   let fⁿ⊥ = (tarski-chain-2 P cont-fun) in
   let ffⁿ⊥ = (chain-map-2 (pos P) (pos P) (fⁿ⊥) (mon cont-fun)) in
   let ⊔fⁿ⊥ = (⊔ (⋃ fⁿ⊥)) in
   let ⊔ffⁿ⊥ = (⊔ (⋃ ffⁿ⊥)) in
     begin
-      (g (mon cont-fun)) ⊔fⁿ⊥
-    ≡⟨ lub-preserve cont-fun fⁿ⊥ (⋃ fⁿ⊥) (⋃ ffⁿ⊥) ⟩ 
+      f(⊔fⁿ⊥)
+    ≡⟨ lub-preserve cont-fun fⁿ⊥ ⟩
       ⊔ffⁿ⊥
     ≡⟨ lubs-shift-invariant P (ffⁿ⊥) (fⁿ⊥) 1 (λ {n} → Eq.refl) ⟩
       ⊔fⁿ⊥
@@ -252,15 +230,15 @@ function-⊑ : (P : domain-2) (P′ : domain-2) (f : cont-fun-on-domains P P′)
 
 function-⊑ P P′ f f′ = ∀ {x : A (pos P)} → (R (pos P′)) ((g (mon f)) x) ((g (mon f′)) x)
 
+
 postulate
-  cont-fun-extensionality : ∀ {P P′ : poset2} {f f′ : continuous-fun-2 P P′}
-    → (∀ (x : A P) → (g (mon f)) x ≡ (g (mon f′)) x)
+  function-extensionality : ∀ {A B : Set} {f f′ : A → B}
+    → (∀ (x : A) → f x ≡ f′ x)
       -----------------------
     → f ≡ f′
 
-
 postulate
-  cont-fun-extensionality-2 : ∀ {P P′ : domain-2} {f f′ : cont-fun-on-domains P P′}
+  cont-fun-extensionality : ∀ {P P′ : domain-2} {f f′ : cont-fun-on-domains P P′}
     → (∀ (x : A (pos P)) → (g (mon f)) x ≡ (g (mon f′)) x)
       -----------------------
     → f ≡ f′
@@ -268,7 +246,7 @@ postulate
 
 function-⊑-antisymmetry : (P : domain-2) (P′ : domain-2) (f : cont-fun-on-domains P P′) (f′ : cont-fun-on-domains P P′) → function-⊑ P P′ f f′ → function-⊑ P P′ f′ f → f ≡ f′
 
-function-⊑-antisymmetry P P′ f f′ f⊑f′ f′⊑f = cont-fun-extensionality-2 (λ x → antisymmetric (pos P′) (f⊑f′ {x}) (f′⊑f {x}))
+function-⊑-antisymmetry P P′ f f′ f⊑f′ f′⊑f = cont-fun-extensionality (λ x → antisymmetric (pos P′) (f⊑f′ {x}) (f′⊑f {x}))
 
 function-pos : (P : domain-2) (P′ : domain-2) → poset2
 
@@ -358,10 +336,8 @@ lub-chain-diagonalised P double-index-fun = record { monotone = record { g = λ 
 diagonalising-lemma-1 : (P : domain-2) → (double-index-fun : monotone-fun-2 nats²-pos (pos P))
   → ⊔ ((chain-complete P) (lub-chain-doubly-indexed-first-varying P double-index-fun)) ≡ ⊔ ((chain-complete P) (lub-chain-diagonalised P double-index-fun))
 
-
 diagonalising-lemma-2 : (P : domain-2) → (double-index-fun : monotone-fun-2 nats²-pos (pos P))
   → ⊔ ((chain-complete P) (lub-chain-doubly-indexed-second-varying P double-index-fun)) ≡ ⊔ ((chain-complete P) (lub-chain-diagonalised P double-index-fun))
-
 
 diagonalising-lemma : (P : domain-2) → (double-index-fun : monotone-fun-2 nats²-pos (pos P))
   → ⊔ ((chain-complete P) (lub-chain-doubly-indexed-first-varying P double-index-fun)) ≡ ⊔ ((chain-complete P) (lub-chain-doubly-indexed-second-varying P double-index-fun))
@@ -405,17 +381,145 @@ diagonalising-lemma-1 P double-index-fun = antisymmetric (pos P)
   (lub2 (chain-complete P (lub-chain-diagonalised P double-index-fun)) λ {n} → transitive (pos P) (lub1 (chain-complete P (doubly-indexed-chain-fix-first P double-index-fun n)) {n}) (lub1 (chain-complete P (lub-chain-doubly-indexed-first-varying P double-index-fun)) {n}))
 
 
---diagonalising-lemma-2 P double-index-fun = {!!}
+diagonalising-lemma-2 P double-index-fun = antisymmetric (pos P) (lub2 (chain-complete P (lub-chain-doubly-indexed-second-varying P double-index-fun))
+  (λ {n} → lub2 (chain-complete P (doubly-indexed-chain-fix-second P double-index-fun n)) (λ {n₁} → dₘₙ≤⊔dₖₖ P double-index-fun)))
+  (lub2 (chain-complete P (lub-chain-diagonalised P double-index-fun)) (λ {n} → transitive (pos P) (lub1 (chain-complete P (doubly-indexed-chain-fix-second P double-index-fun n)) {n}) (lub1 (chain-complete P (lub-chain-doubly-indexed-second-varying P double-index-fun)))))
 
 diagonalising-lemma P double-index-fun = Eq.trans (diagonalising-lemma-1 P double-index-fun) (swap-≡ (diagonalising-lemma-2 P double-index-fun))
 
 
+lub-preserve-lemma : (P P′ : domain-2) → (c : chain-2 (function-pos P P′)) → (c₁ : chain-2 (pos P)) → (λ z → g (mon (g (chain-2.monotone c) z)) (⊔ (chain-complete P c₁))) ≡ (λ z → ⊔ (chain-complete P′ (chain-map-2 (pos P) (pos P′) c₁ (mon (g (chain-2.monotone c) z)))))
+
+lub-preserve-lemma P P′ c c₁ = function-extensionality ((λ (n : ℕ) → (lub-preserve (g (chain-2.monotone c) n) c₁)))
+
+same-f-same-lub : (P : domain-2) (c c′ : chain-2 (pos P)) → g (chain-2.monotone c) ≡ g (chain-2.monotone c′) → ⊔ (chain-complete P c) ≡ ⊔ (chain-complete P c′)
+
+same-f-same-lub P c c′ Eq.refl = antisymmetric (pos P) (lub2 (chain-complete P c) (lub1 (chain-complete P c′))) (lub2 (chain-complete P c′) (lub1 (chain-complete P c)))
+
+
+same-f-same-lub-≤ : (P : domain-2) (c c′ : chain-2 (pos P)) → ((n : ℕ) → (R (pos P)) (g (chain-2.monotone c) n) (g (chain-2.monotone c′) n)) → (R (pos P)) (⊔ (chain-complete P c)) (⊔ (chain-complete P c′))
+
+same-f-same-lub-≤ P c c′ fₖ≤gₖ = lub2 (chain-complete P c) (λ {n} → transitive (pos P) (fₖ≤gₖ n) (lub1 (chain-complete P c′)))
+
+
+function-domain-⊔-mon : (P P′ : domain-2) → (c : chain-2 (function-pos P P′)) → monotone-fun-2 (pos P) (pos P′)
+function-domain-⊔-mon P P′ c =
+  record { g = ⊔-of-chain-argumentwise P P′ c 
+         ; mon = λ {a} {a′} a≤a′ → lub2 (chain-complete P′ (chain-argumentwise P P′ c a)) (λ {n} → transitive (pos P′) (mon (mon (g (chain-2.monotone c) n)) a≤a′) (lub1 (chain-complete P′ (chain-argumentwise P P′ c a′)) {n}))
+         }
+
+function-domain-chain : (P P′ : domain-2) (c : chain-2 (function-pos P P′)) → (c₁ : chain-2 (pos P)) → chain-2 (pos P′)
+function-domain-chain P P′ c c₁ = record
+  { monotone = record { g =  λ z → ⊔ (chain-complete P′ (chain-map-2 (pos P) (pos P′) c₁ (mon (g (chain-2.monotone c) z))))
+
+                      ; mon = λ {a} {a′} a≤a′ →  lub2
+                                                   (chain-complete P′
+                                                    (chain-map-2 (pos P) (pos P′) c₁ (mon (g (chain-2.monotone c) a))))
+                                                   λ {n} → transitive (pos P′) (mon (chain-2.monotone c) a≤a′) (lub1 (chain-complete P′ (chain-map-2 (pos P) (pos P′) c₁ (mon (g (chain-2.monotone c) a′)))) {n})
+                      }
+  } 
+
+--(mon (chain-2.monotone c) a≤a′) : R (pos P′) (g (mon (g (chain-2.monotone c) a)) ?) (g (mon (g (chain-2.monotone c) a′)) ?)
+function-domain-doubly-indexed-fun : (P P′ : domain-2) → (c : chain-2 (function-pos P P′)) → (c₁ : chain-2 (pos P)) → monotone-fun-2 nats²-pos (pos P′)
+function-domain-doubly-indexed-fun P P′ c c₁  =
+  record { g = λ x → 
+             let m = (Data.Product.proj₁ x) in
+             let n = (Data.Product.proj₂ x) in
+             let c₁-fun = g (chain-2.monotone c₁) in
+             let chain-of-funs = g (chain-2.monotone c) in
+             let fₘ = g (mon (chain-of-funs m))  in
+             let dₙ = c₁-fun n in 
+           fₘ dₙ
+         ; mon = λ {m₁,n₁} {m₂,n₂} m₁,n₁≤m₂,n₂ →
+             let m₂ = Data.Product.proj₁ m₂,n₂ in
+             let m₁≤m₂ = Data.Product.proj₁ m₁,n₁≤m₂,n₂ in
+             let n₁≤n₂ = Data.Product.proj₂ m₁,n₁≤m₂,n₂ in
+             let fₘ₁dₙ₁≤fₘ₂dₙ₁ = mon (chain-2.monotone c) m₁≤m₂ in
+             let fₘ₂dₙ₁≤fₘ₂dₙ₂ = mon (mon (g (chain-2.monotone c) m₂)) (mon (chain-2.monotone c₁) n₁≤n₂) in
+           transitive (pos P′) fₘ₁dₙ₁≤fₘ₂dₙ₁ fₘ₂dₙ₁≤fₘ₂dₙ₂
+         }
+
+
+
+function-domain-⊔-lemma-1 : (P P′ : domain-2) → (c : chain-2 (function-pos P P′)) → (c₁ : chain-2 (pos P))
+  → ⊔
+    (chain-complete P′
+      (function-domain-chain P P′ c c₁)) ≡
+      ⊔
+      (chain-complete P′
+       (lub-chain-doubly-indexed-first-varying P′
+        (function-domain-doubly-indexed-fun P P′ c c₁)))
+
+function-domain-⊔-lemma-1 P P′ c c₁ =
+  same-f-same-lub P′
+   (function-domain-chain P P′ c c₁)
+   (lub-chain-doubly-indexed-first-varying P′
+    (function-domain-doubly-indexed-fun P P′ c c₁)
+   )
+   (function-extensionality
+    λ x → same-f-same-lub P′
+           (chain-map-2 (pos P) (pos P′) c₁ (mon (g (chain-2.monotone c) x)))
+           (doubly-indexed-chain-fix-first P′
+            (function-domain-doubly-indexed-fun P P′ c c₁)
+            x
+           )
+           Eq.refl
+   )
+
+
+function-domain-⊔-lemma-2 : (P P′ : domain-2) → (c : chain-2 (function-pos P P′)) → (c₁ : chain-2 (pos P)) → 
+    ⊔
+      (chain-complete P′
+       (lub-chain-doubly-indexed-second-varying P′
+        (function-domain-doubly-indexed-fun P P′ c c₁)))
+      ≡
+      ⊔
+      (chain-complete P′
+       (chain-map-2 (pos P) (pos P′) c₁ (function-domain-⊔-mon P P′ c)))
+
+function-domain-⊔-lemma-2 P P′ c c₁ =
+  same-f-same-lub P′ (lub-chain-doubly-indexed-second-varying P′
+   (function-domain-doubly-indexed-fun P P′ c c₁))
+   (chain-map-2 (pos P) (pos P′) c₁ (function-domain-⊔-mon P P′ c))
+   (function-extensionality
+    (λ x → same-f-same-lub P′
+     (doubly-indexed-chain-fix-second P′
+      (function-domain-doubly-indexed-fun P P′ c c₁) x
+     )
+     (chain-argumentwise P P′ c (g (chain-2.monotone c₁) x))
+     Eq.refl
+    )
+   )
+
+
 function-domain-⊔ P P′ c = record
-  { mon = record
-    { g = ⊔-of-chain-argumentwise P P′ c 
-      ; mon = λ {a} {a′} a≤a′ → lub2 (chain-complete P′ (chain-argumentwise P P′ c a)) (λ {n} → transitive (pos P′) (mon (mon (g (chain-2.monotone c) n)) a≤a′) (lub1 (chain-complete P′ (chain-argumentwise P P′ c a′)) {n}))
-    }
-  ; lub-preserve = ?
+  { mon = function-domain-⊔-mon P P′ c
+  ; lub-preserve = λ c₁ →
+    begin
+      ⊔-of-chain-argumentwise P P′ c (⊔ (chain-complete P c₁))
+    ≡⟨ same-f-same-lub P′
+        (chain-argumentwise P P′ c (⊔ (chain-complete P c₁)))
+        (function-domain-chain P P′ c c₁)
+        (function-extensionality
+         (λ n → lub-preserve (g (chain-2.monotone c) n )c₁)
+        )
+     ⟩
+      ⊔ (chain-complete P′ (function-domain-chain P P′ c c₁))
+    ≡⟨ function-domain-⊔-lemma-1 P P′ c c₁ ⟩
+      ⊔
+        (chain-complete P′
+         (lub-chain-doubly-indexed-first-varying P′
+          (function-domain-doubly-indexed-fun P P′ c c₁)))
+    ≡⟨  diagonalising-lemma P′ (function-domain-doubly-indexed-fun P P′ c c₁) ⟩
+      ⊔
+        (chain-complete P′
+         (lub-chain-doubly-indexed-second-varying P′
+          (function-domain-doubly-indexed-fun P P′ c c₁)))
+    ≡⟨ function-domain-⊔-lemma-2 P P′ c c₁ ⟩
+      ⊔
+        (chain-complete P′
+         (chain-map-2 (pos P) (pos P′) c₁ (function-domain-⊔-mon P P′ c)))
+    ∎
   }
 
 function-domain-chain-complete P P′ c = record
@@ -426,63 +530,146 @@ function-domain-chain-complete P P′ c = record
 
 
 function-domain-⊥-function : (P : domain-2) (P′ : domain-2) → cont-fun-on-domains P P′
+function-domain-⊥-func-mon : (P : domain-2) (P′ : domain-2) → monotone-fun-2 (pos P) (pos P′)
+function-domain-⊥-func-mon P P′ = record { g = λ x → ⊥ (bottom P′)
+                                         ; mon = λ a≤a′ → ≡→⊑ (pos P′) Eq.refl
+                                         }
 
---function-domain-⊥-function P P′ = record { mon =
---                                           record
---                                                  { g = λ x → ⊥ (bottom P′)
---                                                  ; mon = λ a≤a′ → ≡→⊑ (pos P′) Eq.refl
---                                                  }
---                                         ; lub-preserve = λ c ⋃₁ ⋃₂ → antisymmetric (pos P′) (⊥-is-bottom (bottom P′)) (lub2 ⋃₂ λ {n} → ≡→⊑ (pos P′) Eq.refl)
---                                         }
+
+function-domain-⊥-function P P′ = record { mon = function-domain-⊥-func-mon P P′  
+                                         ; lub-preserve = λ c → antisymmetric (pos P′)
+                                           (⊥-is-bottom (bottom P′))
+                                           (lub2 (chain-complete P′ (chain-map-2 (pos P) (pos P′) c (function-domain-⊥-func-mon P P′)))
+                                             (λ {n} → ≡→⊑ (pos P′) Eq.refl))
+                                         }
                                          
 function-domain P  P′ = record
   { pos = function-pos P P′
   ; chain-complete = function-domain-chain-complete P P′
   ; bottom = record { ⊥ = function-domain-⊥-function P P′
-                    ; ⊥-is-bottom = ?
+                    ; ⊥-is-bottom = λ {a} {x} → ⊥-is-bottom (bottom P′)
                     }
   }
 
-tarski-continuous : ∀ (P : domain-2) → continuous-fun-2 (pos P) (pos P) → cont-fun-on-domains (function-domain P P) P
+tarski-continuous : ∀ (P : domain-2) → cont-fun-on-domains (function-domain P P) P
 
 
-tarski-mon : ∀ (P : domain-2) → continuous-fun-2 (pos P) (pos P) → monotone-fun-2 (pos (function-domain P P)) (pos P)
+tarski-mon : ∀ (P : domain-2) → monotone-fun-2 (pos (function-domain P P)) (pos P)
 
 tarski-lub-preserve : ∀ (P : domain-2)
-  → (cont-fun : continuous-fun-2 (pos P) (pos P))
   → (c : chain-2 (pos (function-domain P P)))
-  → g (tarski-mon P cont-fun) (⊔ (chain-complete (function-domain P P) c)) ≡ ⊔ (chain-complete P (chain-map-2 (pos (function-domain P P)) (pos P) c (tarski-mon P cont-fun)))
+  → g (tarski-mon P) (⊔ (chain-complete (function-domain P P) c)) ≡ ⊔ (chain-complete P (chain-map-2 (pos (function-domain P P)) (pos P) c (tarski-mon P)))
 
 
 
-fix-f′-is-pre-fixed : ∀ (P : domain-2) → (f : cont-fun-on-domains P P) → (f′ : cont-fun-on-domains P P) → (f⊑f′ : function-⊑ P P f f′) → R (pos P) (g (mon f) (⊔ (chain-complete P (tarski-chain-3 P f′)))) (⊔ (chain-complete P (tarski-chain-3 P f′)))
+fix-f′-is-pre-fixed : ∀ (P : domain-2) → (f : cont-fun-on-domains P P) → (f′ : cont-fun-on-domains P P) → (f⊑f′ : function-⊑ P P f f′) → R (pos P) (g (mon f) (⊔ (chain-complete P (tarski-chain-2 P f′)))) (⊔ (chain-complete P (tarski-chain-2 P f′)))
 
---fix-f′-is-pre-fixed P f f′ f⊑f′ = transitive (pos P) (f⊑f′ {d (lfp1 (tarski-2 P f′))}) (pre-fix (lfp1 (tarski-2 P f′)))
+fix-f′-is-pre-fixed P f f′ f⊑f′ = transitive (pos P) ((f⊑f′ {d (lfp1 (tarski-2 P f′))})) (pre-fix (lfp1 (tarski-2 P f′)))
 
 
---tarski-mon P cont-fun = record { g = λ (cont-fun : continuous-fun-2 (pos P) (pos P)) → d (lfp1 (tarski-2 P cont-fun))
---                               ; mon = λ {f} {f′} f⊑f′ → lfp2 (tarski-2 P f) (fix-f′-is-pre-fixed P f f′ f⊑f′)
---                               }
+tarski-mon P = record { g =  λ (cont-fun : cont-fun-on-domains P P) → d (lfp1 (tarski-2 P cont-fun))
+                      ; mon = λ {f} {f′} f⊑f′ → lfp2 (tarski-2 P f) (fix-f′-is-pre-fixed P f f′ f⊑f′)
+                      }
 
 
 remark-237 : (P : domain-2) → (P′ : domain-2) → (c : chain-2 (pos P)) → (f : monotone-fun-2 (pos P) (pos P′))
-  → (∀ (d : chain-2 (pos P)) → (⋃₁ : lub-2 d) → (⋃₂ : lub-2 (chain-map-2 (pos P) (pos P′) d f)) → (R (pos P′)) (g f (⊔ ⋃₁)) (⊔ ⋃₂))
-  → continuous-fun-2 (pos P) (pos P′)
+  → (∀ (d : chain-2 (pos P)) → (R (pos P′)) ((g f) (⊔ (chain-complete P d))) (⊔ (chain-complete P′ (chain-map-2 (pos P) (pos P′) d f))))
+  → cont-fun-on-domains P P′
 
 
 unique-lub : ∀ (P : poset2) → (c : chain-2 P) → (a b : lub-2 c) → ⊔ a ≡ ⊔ b
 unique-lub P c a b = antisymmetric P (lub2 a (lub1 b)) (lub2 b (lub1 a))
 
 remark-237 P P′ c f f⋃dₙ⊑⋃fdₙ = record { mon = f
-                                       ; lub-preserve = λ d ⋃₁ ⋃₂ → antisymmetric (pos P′) (f⋃dₙ⊑⋃fdₙ d ⋃₁ ⋃₂) (lub2 ⋃₂ λ {n} → (mon f) (lub1 ⋃₁))
+                                       ; lub-preserve = λ c → antisymmetric (pos P′) (f⋃dₙ⊑⋃fdₙ c) (lub2 (chain-complete P′ (chain-map-2 (pos P) (pos P′) c f)) (λ {n} → mon f (lub1 (chain-complete P c))))
                                        }
-tarski-lub-preserve- P cont-fun c =
-  begin
-    ⊔ (chain-complete P (tarski-chain-2 P (function-domain-⊔ P P c)))
-  ≡⟨ {!!} ⟩
-    ⊔ (chain-complete P(chain-map-2 (function-pos P P) (pos P) c (tarski-mon P cont-fun)))
-  ∎  
 
-tarski-continuous P cont-fun = record { mon = tarski-mon P cont-fun
-                                      ; lub-preserve = tarski-lub-preserve P cont-fun
-                                      }
+fix⋃fₙ⊑⋃fixfₙ : (P : domain-2) → (c : chain-2 (function-pos P P)) → (d : chain-2 (function-pos P P))
+  → R (pos P)
+     (⊔
+      (chain-complete P (tarski-chain-2 P (function-domain-⊔ P P d))))
+     (⊔
+      (chain-complete P
+       (chain-map-2 (function-pos P P) (pos P) d
+        (tarski-mon P))))
+
+⋃fixfₙ-is-pre-fix : (P : domain-2) → (c : chain-2 (function-pos P P)) → (d : chain-2 (function-pos P P))
+  → R (pos P)
+    (g (mon (function-domain-⊔ P P d))
+     (⊔
+      (chain-complete P
+       (chain-map-2 (function-pos P P) (pos P) d
+        (tarski-mon P)))))
+    (⊔
+     (chain-complete P
+      (chain-map-2 (function-pos P P) (pos P) d
+        (tarski-mon P))))
+
+
+chain-of-fₖ[fixfₖ] : (P : domain-2) → (d : chain-2 (function-pos P P)) → chain-2 (pos P)
+
+chain-of-fₖ[fixfₖ] P d = record { monotone = record { g = λ k → g (mon (g (chain-2.monotone d) k)) ((g (tarski-mon P)) (g (chain-2.monotone d) k))
+                                                             ; mon = λ {a} {a′} a≤a′ → transitive (pos P) (mon (chain-2.monotone d) a≤a′) ((mon (mon (g (chain-2.monotone d) a′)))(mon (tarski-mon P) (mon (chain-2.monotone d) a≤a′)) )
+                                                             }
+                                           }
+
+⋃fₘ[⋃fixfₙ]=⋃[fₖfixfₖ] : (P : domain-2) → (d : chain-2 (function-pos P P)) →
+  ⊔-of-chain-argumentwise P P d
+   (⊔
+    (chain-complete P
+     (chain-map-2 (function-pos P P) (pos P) d
+      (tarski-mon P))))
+ ≡
+  ⊔
+   (chain-complete P
+    (chain-of-fₖ[fixfₖ] P d))
+
+m,n→fₘfixfₙ : (P : domain-2) → (c : chain-2 (function-pos P P)) → monotone-fun-2 nats²-pos (pos P)
+
+m,n→fₘfixfₙ P c = record { g = λ m,n
+                           → let m = Data.Product.proj₁ m,n in
+                             let n = Data.Product.proj₂ m,n in
+                             let f = g (chain-2.monotone c) in 
+                             let fixfₙ = d (lfp1 (tarski-2 P (f n))) in
+                           g (mon (f m)) (fixfₙ)     
+                         ; mon = λ {m,n} {m′,n′} m,n≤m′,n′
+                           → let m≤m′ = Data.Product.proj₁ m,n≤m′,n′ in
+                             let n≤n′ = Data.Product.proj₂ m,n≤m′,n′ in
+                             let m′ = Data.Product.proj₁ m′,n′ in
+                           transitive (pos P) (mon (chain-2.monotone c) m≤m′) ((mon (mon (g (chain-2.monotone c) m′))) (mon (tarski-mon P) (mon (chain-2.monotone c) n≤n′)))
+                         }
+
+⋃fₘ[⋃fixfₙ]=⋃[fₖfixfₖ] P d =
+  let [⋃fₘ][⋃fixfₙ] = ⊔-of-chain-argumentwise P P d (⊔ (chain-complete P (chain-map-2 (function-pos P P) (pos P) d (tarski-mon P)))) in
+  begin
+    [⋃fₘ][⋃fixfₙ]
+  ≡⟨ same-f-same-lub P (chain-argumentwise P P d
+                         (⊔
+                          (chain-complete P
+                           (chain-map-2 (function-pos P P) (pos P) d (tarski-mon P))))) (lub-chain-doubly-indexed-first-varying P (m,n→fₘfixfₙ P d)) (function-extensionality λ n → Eq.trans (lub-preserve (g (chain-2.monotone d) n) (chain-map-2 (function-pos P P) (pos P) d (tarski-mon P))) (same-f-same-lub P (chain-map-2 (pos P) (pos P)
+                                                                                                                                                                                                                                                                                                                      (chain-map-2 (function-pos P P) (pos P) d (tarski-mon P))
+                                                                                                                                                                                                                                                                                                                      (mon (g (chain-2.monotone d) n))) (doubly-indexed-chain-fix-first P (m,n→fₘfixfₙ P d) n) Eq.refl)) ⟩
+    ⊔
+      (chain-complete P
+       (lub-chain-doubly-indexed-first-varying P (m,n→fₘfixfₙ P d)))
+  ≡⟨ diagonalising-lemma-1 P (m,n→fₘfixfₙ P d) ⟩
+    ⊔ (chain-complete P (lub-chain-diagonalised P (m,n→fₘfixfₙ P d)))
+  ≡⟨ same-f-same-lub P (lub-chain-diagonalised P (m,n→fₘfixfₙ P d)) (chain-of-fₖ[fixfₖ] P d) Eq.refl ⟩
+    ⊔ (chain-complete P (chain-of-fₖ[fixfₖ] P d))
+  ∎ 
+
+⋃fixfₙ-is-pre-fix P c d = a≡b≤c→a≤c {A (pos P)} {R (pos P)} (⋃fₘ[⋃fixfₙ]=⋃[fₖfixfₖ] P d) (same-f-same-lub-≤ P (chain-of-fₖ[fixfₖ] P d) (chain-map-2 (function-pos P P) (pos P) d (tarski-mon P)) λ n → pre-fix (lfp1 (tarski-2 P (g (chain-2.monotone d) n)))) 
+
+
+fix⋃fₙ⊑⋃fixfₙ P c d = (lfp2 (tarski-2 P (function-domain-⊔ P P d)) (⋃fixfₙ-is-pre-fix P c d))
+
+
+tarski-lub-preserve P c = lub-preserve (remark-237 ((function-domain P P)) P c (tarski-mon P) (fix⋃fₙ⊑⋃fixfₙ P c)) c
+
+
+tarski-continuous P = record { mon = tarski-mon P
+                             ; lub-preserve = tarski-lub-preserve P
+                             }
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
