@@ -215,7 +215,7 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → L —→ L′
     → case L M N —→ case L′ M N
 
-  β-case₁ : ∀ {Γ A} {L : Γ ⊢ `ℕ} {M : Γ ⊢ A} {N : Γ , `ℕ ⊢ A}
+  β-case₁ : ∀ {Γ A} {M : Γ ⊢ A} {N : Γ , `ℕ ⊢ A}
     → case `zero M N —→ M
 
   β-case₂ : ∀ {Γ A} {V : Γ ⊢ `ℕ} {M : Γ ⊢ A} {N : Γ , `ℕ ⊢ A}
@@ -226,6 +226,7 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → μ N —→ N [ μ N ]
 
   ξ-is-zero : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
+    → M —→ M′
     → `is-zero M —→ `is-zero M′
 
   β-is-zero₁ : ∀ {Γ}
@@ -234,3 +235,52 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
   β-is-zero₂ : ∀ {Γ} {M : Γ ⊢ `ℕ}
     → Value M
     → `is-zero (`suc M) —→ `false 
+
+data Progress {A} (M : ∅ ⊢ A) : Set where
+
+  step : ∀ {N : ∅ ⊢ A}
+    → M —→ N
+    → Progress M
+
+  done :
+      Value M
+    → Progress M
+
+progress : ∀ {A} → (M : ∅ ⊢ A) → Progress M
+progress (ƛ M) = done V-ƛ
+
+progress (L · M)  with progress L
+...    | step L—→L′               = step (ξ-·₁ L—→L′)
+...    | done V-ƛ with progress M 
+...        | step M—→M′           = step (ξ-·₂ V-ƛ M—→M′)
+...        | done VM              = step (β-ƛ VM)
+
+progress `zero = done V-zero
+
+progress (`is-zero M) with progress M
+...    | step M—→M′      = step (ξ-is-zero M—→M′)
+...    | done (V-zero)   = step β-is-zero₁
+...    | done (V-suc VM) = step (β-is-zero₂ VM)
+
+progress (`suc M) with progress M
+...    | step M—→M′ = step (ξ-suc M—→M′)
+...    | done VM    = done (V-suc VM)
+
+progress (`pred M) with progress M
+...    | step M—→M′ = step (ξ-pred M—→M′)
+...    | done V-zero = step β-pred₁
+...    | done (V-suc VM) = step (β-pred₂ VM)
+
+
+progress `true = done V-true
+progress `false = done V-false
+progress (case L M N) with progress L
+...    | step L—→L′ = step (ξ-case L—→L′)
+...    | done V-zero = step β-case₁
+...    | done (V-suc VL) = step (β-case₂ VL)
+
+progress (if B then M else N) with progress B
+...    | step L—→L′   = step (ξ-if L—→L′)
+...    | done V-true  = step β-if₁
+...    | done V-false = step β-if₂
+progress (μ M) = step β-μ
