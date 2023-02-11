@@ -6,11 +6,11 @@ open Eq using (_≡_)
 open import Data.Nat using (ℕ; zero; suc; _≤_; _+_)
 open import Data.Product
 
-record poset (A : Set) (_⊑_ : A → A → Set) : Set where
+record poset (D : Set) (_⊑_ : D → D → Set) : Set where
   field
-    reflexive     : ∀ {a : A} → a ⊑ a 
-    antisymmetric : ∀ {a b : A} → (a ⊑ b) → (b ⊑ a) → a ≡ b
-    transitive    : ∀ {a b c : A} → (a ⊑ b) → (b ⊑ c) → (a ⊑ c)
+    reflexive     : ∀ {d : D} → d ⊑ d 
+    transitive    : ∀ {d d′ d″ : D} → (d ⊑ d′) → (d′ ⊑ d″) → (d ⊑ d″)
+    antisymmetric : ∀ {d d′ : D} → (d ⊑ d′) → (d′ ⊑ d) → d ≡ d′
 open poset
 
 
