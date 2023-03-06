@@ -1,13 +1,15 @@
 module debruijn where
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl)
-open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B )
+open Eq using (_≡_; refl; cong)
+open Eq.≡-Reasoning
+open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; z≼n; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B; tarski-continuous )
 open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Bool using (Bool; true; false)
 open import Relation.Nullary using (¬_)
 open import Relation.Nullary.Decidable using (True; toWitness)
+open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩) 
 
 infix 4 _⊢_
 infix 4 _∋_
@@ -336,9 +338,13 @@ constant-fun-is-cont {B} {D} b = record { mon = constant-fun-is-cont-mon {B} {D}
                                             )
                                         }
 
+pair-f : ∀ {D D₁ D₂ : domain} → cont-fun D D₁ → cont-fun D D₂ → cont-fun D (domain-product D₁ D₂)
+pair-f f₁ f₂ = record { mon = record { g = λ d → ⟨ monotone-fun.g (cont-fun.mon f₁) d , monotone-fun.g (cont-fun.mon f₂) d ⟩
+                                     ; mon = λ a≤a′ → ⟨ monotone-fun.mon (cont-fun.mon f₁) a≤a′ , monotone-fun.mon (cont-fun.mon f₂) a≤a′ ⟩
+                                     }
+                      ; lub-preserve = {!!}
+                      }
 
-constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
-constant-fun B b = constant-fun-is-cont b
 
 case_of_ : ∀ {a b} {A : Set a} {B : Set b} → A → (A → B) → B
 case x of f = f x
@@ -346,12 +352,99 @@ case x of f = f x
 case_return_of_ : ∀ {a b} {A : Set a} (x : A) (B : A → Set b) → (∀ x → B x) → B x
 case x return B of f = f x
 
+_∘_ : ∀ {D₁ D₂ D₃} → cont-fun D₂ D₃ → cont-fun D₁ D₂ → cont-fun D₁ D₃
+
+∘-mon : ∀ {D₁ D₂ D₃} → cont-fun D₂ D₃ → cont-fun D₁ D₂ → monotone-fun (domain.pos D₁) (domain.pos D₃)
+∘-mon g f = record { g = λ x → monotone-fun.g (cont-fun.mon g) (monotone-fun.g (cont-fun.mon f) x)
+                   ; mon = λ a≤a′ → monotone-fun.mon (cont-fun.mon g) (monotone-fun.mon (cont-fun.mon f) a≤a′)
+                   }
+
+
+_∘_ {D₁ = D₁} {D₂ = D₂} {D₃ = D₃} g f  =
+                     record { mon = ∘-mon g f
+                            ; lub-preserve = λ c →
+                            begin
+                              monotone-fun.g (cont-fun.mon g)
+                                (monotone-fun.g (cont-fun.mon f)
+                                  (posets2.lub.⊔ (domain.chain-complete D₁ c)))
+                            ≡⟨ cong (monotone-fun.g (cont-fun.mon g)) (cont-fun.lub-preserve f c) ⟩
+                              monotone-fun.g (cont-fun.mon g)
+                                (posets2.lub.⊔
+                                 (domain.chain-complete D₂ (chain-map c (cont-fun.mon f))))
+                            ≡⟨ cont-fun.lub-preserve g (chain-map c (cont-fun.mon f)) ⟩
+                              posets2.lub.⊔ (domain.chain-complete D₃ (chain-map c (∘-mon g f)))
+                            ∎ 
+                            }
+
+s⊥ : cont-fun ℕ⊥ ℕ⊥
+s⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos ℕ⊥)
+s⊥-mon = record { g = (λ { (inj n) → inj (suc n) ; ⊥₁ → ⊥₁ }) 
+                           ; mon = λ { z≼n → z≼n ; x≼x → x≼x }
+                           }
+s⊥ = record { mon =  s⊥-mon
+            ; lub-preserve = {!!}
+            }
+
+z⊥ : cont-fun ℕ⊥ 𝔹⊥
+z⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos 𝔹⊥)
+z⊥-mon = record { g = λ { (inj 0) → (inj true); ⊥₁ → ⊥₁; (inj (suc n)) → inj false}
+                ; mon = λ {z≼n → z≼n; x≼x → x≼x} 
+                }
+z⊥ = record { mon = z⊥-mon
+            ; lub-preserve = {!!}
+            }
+
+p⊥ : cont-fun ℕ⊥ ℕ⊥
+p⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos ℕ⊥)
+p⊥-mon = record { g = λ { (inj (suc n)) → (inj n); _ → ⊥₁}
+                ; mon = λ { z≼n → z≼n ; x≼x → x≼x }
+                }
+p⊥ = record { mon = p⊥-mon
+            ; lub-preserve = {!!}
+            }
+
+if-cont : ∀ {D} → cont-fun (domain-product 𝔹⊥ (domain-product D D)) D
+if-mon : ∀ {D} → monotone-fun (posets2.product-pos 𝔹⊥ (domain-product D D)) (domain.pos D)
+if-mon {D} = record { g = (λ { ⟨ inj true , ⟨ d , _ ⟩ ⟩ → d
+                             ; ⟨ inj false , ⟨ _ , d′ ⟩ ⟩ → d′
+                             ; ⟨ ⊥₁ , ⟨ _ , _ ⟩ ⟩ → posets2.least-element.⊥ (domain.bottom D)
+                             })
+                    ; mon = λ { {⟨ ⊥₁ , b₁ ⟩} → λ a≤a′ → (posets2.least-element.⊥-is-bottom (domain.bottom D))
+                              ; {⟨ inj true , _ ⟩} {⟨ inj true , _ ⟩} → λ a≤a′ → proj₁ (proj₂ a≤a′)
+                              ; {⟨ inj false , _ ⟩} {⟨ inj false , _ ⟩} → λ a≤a′ → proj₂ (proj₂ a≤a′)
+                              }
+                    }
+if-cont {D} = record { mon = if-mon {D}
+                     ; lub-preserve = {!!}
+                     }
+
+ev-cont : ∀ {D E} → cont-fun (domain-product (function-domain D E) D) E
+ev-mon : ∀ {D E} → monotone-fun (posets2.product-pos (function-domain D E) D) (domain.pos E)
+ev-mon {D} {E} = record { g = λ {⟨ f , d ⟩ → monotone-fun.g (cont-fun.mon f) d}
+                        ; mon = λ { {⟨ f , d ⟩} {⟨ f′ , d′ ⟩} ⟨ f≤f′ , d≤d′ ⟩ →
+                          poset.transitive (domain.pos E)
+                            (monotone-fun.mon (cont-fun.mon f) d≤d′)
+                            (f≤f′ {d′}) }
+                        }
+ev-cont = record { mon = ev-mon
+                 ; lub-preserve = {!!}
+                 }
+
+
+constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
+constant-fun B b = constant-fun-is-cont b
+
 
 ⟦_⊢′_⟧ : ∀ {A} → (Γ : Context) → (M : Γ ⊢ A) → cont-fun context-⟦ Γ ⟧ ⟦ A ⟧
 ⟦ Γ ⊢′ `zero ⟧ = constant-fun {Γ} ℕ 0
 ⟦ Γ ⊢′ `true ⟧ = constant-fun {Γ} Bool true
 ⟦ Γ ⊢′ `false ⟧ = constant-fun {Γ} Bool false
-⟦ Γ ⊢′ ` x ⟧ = record { mon = record { g = λ ρ → {! ρ x !}
+⟦ Γ ⊢′ M₁ · M₂ ⟧ = ev-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ ⟦ Γ ⊢′ M₂ ⟧) 
+⟦ Γ ⊢′ `is-zero N ⟧ = z⊥ ∘ ⟦ Γ ⊢′ N ⟧
+⟦ Γ ⊢′ `suc N ⟧ = s⊥ ∘ ⟦ Γ ⊢′ N ⟧
+⟦ Γ ⊢′ `pred N ⟧ = p⊥ ∘ ⟦ Γ ⊢′ N ⟧
+⟦ Γ ⊢′ if M₁ then M₂ else M₃ ⟧ = if-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ (pair-f ⟦ Γ ⊢′ M₂ ⟧ ⟦ Γ ⊢′ M₃ ⟧))
+⟦ Γ ⊢′ ` x ⟧ = record { mon = record { g = λ ρ → {! ρ !}
                                      ; mon = {!!}
                                      }
                       ; lub-preserve = {!!}
@@ -364,80 +457,4 @@ case x return B of f = f x
                                                  }
                                      ; mon = {!!} }
                       ; lub-preserve = {!!} }
-⟦_⊢′_⟧ {A} Γ (M₁ · M₂) = record { mon = record { g = λ ρ → monotone-fun.g
-                                                       (cont-fun.mon
-                                                         (monotone-fun.g
-                                                           (cont-fun.mon ⟦ Γ ⊢′ M₁ ⟧)
-                                                        ρ)
-                                                       ) (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₂ ⟧)ρ)
-                                 ; mon = λ {a} {a′} a≤a′ →
-                                   poset.transitive (domain.pos ⟦ A ⟧ )
-                                   ((monotone-fun.mon (cont-fun.mon ⟦ Γ ⊢′ M₁ ⟧) a≤a′) {monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₂ ⟧) a})
-                                   (monotone-fun.mon (cont-fun.mon (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₁ ⟧)a′)) (monotone-fun.mon (cont-fun.mon ⟦ Γ ⊢′ M₂ ⟧) a≤a′) ) 
-                                 }
-                          ; lub-preserve = {!!}
-                          }
-⟦ Γ ⊢′ `is-zero N ⟧ = record { mon =
-                        record {
-                               g = λ ρ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))ρ) of
-                                         λ { ⊥₁ → ⊥₁
-                                           ; (inj 0) → inj true
-                                           ; (inj (suc n)) → inj false
-                                           }
-                               ; mon = λ {a} {a′} a≤a′ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))a) of
-                                                       λ { ⊥₁ → {!!}
-                                                         ; (inj 0) → {!!}
-                                                         ; (inj (suc n)) → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))a′) of
-                                                           λ { ⊥₁ → {!!}
-                                                             ; (inj zero) → {!!}
-                                                             ; (inj (suc x)) → {!!}
-                                                             }
-                                                         }
-                               }
-                         ; lub-preserve = {!!}
-                         }
-⟦ Γ ⊢′ `suc N ⟧ = record { mon =
-                    record {
-                           g = λ ρ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))ρ) of
-                           λ { (inj n) → inj (suc n)
-                             ; ⊥₁ → ⊥₁
-                             }
-                           ; mon = λ {a} {a′} a≤a′ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))a) of λ { ⊥₁ → {!!} ; (inj x) → {!!}}
-                           }
-                         ; lub-preserve = {!!}
-                         }
-⟦ Γ ⊢′ `pred N ⟧ = record { mon =
-                    record {
-                           g = λ ρ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ N ⟧))ρ) of
-                           λ { (inj 0) → ⊥₁
-                             ; (inj (suc n)) → inj n
-                             ; ⊥₁ → ⊥₁
-                             }
-                           ; mon = {!!}
-                           }
-                         ; lub-preserve = {!!}
-                         }
-⟦_⊢′_⟧ {A} Γ (if M₁ then M₂ else M₃) = record { mon =
-                    record {
-                           g = λ ρ → case ((monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₁ ⟧))ρ) of
-                           λ { (inj true) → (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₂ ⟧))ρ
-                             ; (inj false) → (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M₃ ⟧))ρ
-                             ; ⊥₁ → posets2.least-element.⊥ (domain.bottom ⟦ A ⟧)
-                             }
-                           ; mon = {!!}
-                           }
-                         ; lub-preserve = {!!}
-                         }
-⟦_⊢′_⟧ {A} Γ (μ M) = record
-                     { mon = record
-                       { g = λ ρ → posets2.pre-fixed.d (least-pre-fixed.lfp1 (tarski-fix ⟦ A ⟧ (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M ⟧)ρ)))
-                       ; mon = λ {a} {a′} a≤a′ → posets2.lub.lub2
-                                                   (domain.chain-complete ⟦ A ⟧
-                                                    (posets2.tarski-chain-of-fⁿ⊥ ⟦ A ⟧
-                                                     (monotone-fun.g (cont-fun.mon ⟦ Γ ⊢′ M ⟧) a)))
-                                                   λ {n} → poset.transitive (domain.pos ⟦ A ⟧)
-                                                   {!((monotone-fun.mon (cont-fun.mon ⟦ Γ ⊢′ M ⟧)) a≤a′)!}
-                                                   {!!}
-                       }
-                     ; lub-preserve = {!!}
-                     } 
+⟦ Γ ⊢′ μ M ⟧ = tarski-continuous ∘ ⟦ Γ ⊢′ M ⟧ 

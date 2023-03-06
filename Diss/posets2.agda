@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module posets2 where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
@@ -102,7 +103,7 @@ record domain : Set₁ where
 open domain
 
 
-product-equality : {A : Set} {a a′ b b′ : A} → a ≡ a′ → b ≡ b′ → (a , b) ≡ (a′ , b′)
+product-equality : {S₁ S₂ : Set} {a a′ : S₁} {b b′ : S₂} → a ≡ a′ → b ≡ b′ → (a , b) ≡ (a′ , b′)
 product-equality {a} {a′} {b} {b′} Eq.refl Eq.refl = Eq.refl
 
 domain-product : domain → domain → domain
@@ -114,7 +115,7 @@ product-R-refl : {D₁ D₂ : domain} → {pair₁ : (A (pos D₁)) × (A (pos D
 product-R-refl {D₁} {D₂} = reflexive (pos D₁) , reflexive (pos D₂)
 
 product-R-antisym : {D₁ D₂ : domain} → {pair₁ pair₂ : (A (pos D₁)) × (A (pos D₂))} → product-R {D₁} {D₂} pair₁ pair₂ → product-R {D₁} {D₂} pair₂ pair₁ → pair₁ ≡ pair₂
-product-R-antisym {D₁} {D₂} {d₁ , d₂} {d₁′ , d₂′} (d₁≤d₁′ , d₂≤d₂′) (d₁′≤d₁ , d₂′≤d₂) = {!product-equality ((antisymmetric (pos D₁)) d₁≤d₁′ d₁′≤d₁)  ?!}
+product-R-antisym {D₁} {D₂} {d₁ , d₂ } {d₁′ , d₂′ } (d₁≤d₁′ , d₂≤d₂′) (d₁′≤d₁ , d₂′≤d₂) = product-equality  (antisymmetric (pos D₁) d₁≤d₁′ d₁′≤d₁) ((antisymmetric (pos D₂)) d₂≤d₂′ d₂′≤d₂)
 
 product-R-trans : {D₁ D₂ : domain} → {pair₁ pair₂ pair₃ : (A (pos D₁)) × (A (pos D₂))} → product-R {D₁} {D₂} pair₁ pair₂ → product-R {D₁} {D₂} pair₂ pair₃ → product-R {D₁} {D₂} pair₁ pair₃
 product-R-trans {D₁} {D₂} (d₁≤d₁′ , d₂≤d₂′) (d₁′≤d₁″ , d₂′≤d₂″) = transitive (pos D₁) d₁≤d₁′ d₁′≤d₁″ , transitive (pos D₂) d₂≤d₂′ d₂′≤d₂″
@@ -246,10 +247,11 @@ flat-domain-pos B = record
                       ; reflexive = x≼x
                       ; antisymmetric = antisym-≼
                       ; transitive = trans-≼
-                      }
-                      
+                      } 
+
+--flat-domain-chain-eventually-constant : ∀ {B} → (c : chain (flat-domain-pos B)) → eventually-constant c
 postulate chain-complete-flat-domain-pos-B : ∀ {B} → (c : chain (flat-domain-pos B)) → lub c
---EDIT
+
 
 flat-domain A = record { pos = flat-domain-pos A
                        ; chain-complete = chain-complete-flat-domain-pos-B
@@ -743,7 +745,7 @@ function-domain P  P′ = record
                     }
   }
 
-tarski-continuous : ∀ (P : domain) → cont-fun (function-domain P P) P
+tarski-continuous : ∀ {P : domain} → cont-fun (function-domain P P) P
 
 
 tarski-mon : ∀ (P : domain) → monotone-fun (pos (function-domain P P)) (pos P)
@@ -862,9 +864,9 @@ fix⋃fₙ⊑⋃fixfₙ P c d = lfp2 (tarski-fix P (function-domain-⊔ P P d)) 
 tarski-lub-preserve P c = lub-preserve (remark-237 ((function-domain P P)) P c (tarski-mon P) (fix⋃fₙ⊑⋃fixfₙ P c)) c
 
 
-tarski-continuous P = record { mon = tarski-mon P
-                             ; lub-preserve = tarski-lub-preserve P
-                             }
+tarski-continuous {P} = record { mon = tarski-mon P
+                               ; lub-preserve = tarski-lub-preserve P
+                               }
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
