@@ -3,7 +3,7 @@ module debruijn where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
-open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; z≼n; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B; tarski-continuous )
+open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; z≼n; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B; tarski-continuous; product-equality )
 open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Bool using (Bool; true; false)
@@ -342,7 +342,7 @@ pair-f : ∀ {D D₁ D₂ : domain} → cont-fun D D₁ → cont-fun D D₂ → 
 pair-f f₁ f₂ = record { mon = record { g = λ d → ⟨ monotone-fun.g (cont-fun.mon f₁) d , monotone-fun.g (cont-fun.mon f₂) d ⟩
                                      ; mon = λ a≤a′ → ⟨ monotone-fun.mon (cont-fun.mon f₁) a≤a′ , monotone-fun.mon (cont-fun.mon f₂) a≤a′ ⟩
                                      }
-                      ; lub-preserve = {!!}
+                      ; lub-preserve = λ c → product-equality ((cont-fun.lub-preserve f₁) c) ((cont-fun.lub-preserve f₂) c)
                       }
 
 
@@ -376,32 +376,40 @@ _∘_ {D₁ = D₁} {D₂ = D₂} {D₃ = D₃} g f  =
                             ∎ 
                             }
 
-s⊥ : cont-fun ℕ⊥ ℕ⊥
-s⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos ℕ⊥)
-s⊥-mon = record { g = (λ { (inj n) → inj (suc n) ; ⊥₁ → ⊥₁ }) 
-                           ; mon = λ { z≼n → z≼n ; x≼x → x≼x }
+extend-function : ∀ {X Y} → (X → posets2.B⊥ Y) → cont-fun (flat-domain X) (flat-domain Y)
+extend-function-mon : ∀ {X Y} → (X → posets2.B⊥ Y) → monotone-fun (posets2.flat-domain-pos X) (posets2.flat-domain-pos Y)
+extend-function-mon f = record { g = λ { ⊥₁ → ⊥₁
+                                       ; (inj x) → f x
+                                       }
+                               ; mon = λ {z≼n → z≼n; x≼x → x≼x}
+                               }
+
+extend-function {X} {Y} f = record { mon = extend-function-mon f
+                           ; lub-preserve = λ c → poset.antisymmetric (posets2.flat-domain-pos Y)
+                               (case posets2.lub.⊔ (chain-complete-flat-domain-pos-B c) of λ { x → {!!} })
+                               (posets2.lub.lub2
+                                  (chain-complete-flat-domain-pos-B
+                                   (chain-map c (extend-function-mon f)))
+                                  λ {n} → monotone-fun.mon (extend-function-mon f) (posets2.lub.lub1 (domain.chain-complete (flat-domain X) c)))
                            }
-s⊥ = record { mon =  s⊥-mon
-            ; lub-preserve = {!!}
-            }
+
+
+s⊥ : cont-fun ℕ⊥ ℕ⊥
+s : ℕ → poset.A (domain.pos ℕ⊥)
+s x = inj (suc x)
+s⊥ = extend-function s
 
 z⊥ : cont-fun ℕ⊥ 𝔹⊥
-z⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos 𝔹⊥)
-z⊥-mon = record { g = λ { (inj 0) → (inj true); ⊥₁ → ⊥₁; (inj (suc n)) → inj false}
-                ; mon = λ {z≼n → z≼n; x≼x → x≼x} 
-                }
-z⊥ = record { mon = z⊥-mon
-            ; lub-preserve = {!!}
-            }
+z : ℕ → poset.A (domain.pos 𝔹⊥)
+z zero = inj true
+z (suc n) = inj false
+z⊥ = extend-function z
 
 p⊥ : cont-fun ℕ⊥ ℕ⊥
-p⊥-mon : monotone-fun (domain.pos ℕ⊥) (domain.pos ℕ⊥)
-p⊥-mon = record { g = λ { (inj (suc n)) → (inj n); _ → ⊥₁}
-                ; mon = λ { z≼n → z≼n ; x≼x → x≼x }
-                }
-p⊥ = record { mon = p⊥-mon
-            ; lub-preserve = {!!}
-            }
+p : ℕ → poset.A (domain.pos ℕ⊥)
+p zero = ⊥₁
+p (suc n) = inj n
+p⊥ = extend-function p
 
 if-cont : ∀ {D} → cont-fun (domain-product 𝔹⊥ (domain-product D D)) D
 if-mon : ∀ {D} → monotone-fun (posets2.product-pos 𝔹⊥ (domain-product D D)) (domain.pos D)
@@ -414,9 +422,55 @@ if-mon {D} = record { g = (λ { ⟨ inj true , ⟨ d , _ ⟩ ⟩ → d
                               ; {⟨ inj false , _ ⟩} {⟨ inj false , _ ⟩} → λ a≤a′ → proj₂ (proj₂ a≤a′)
                               }
                     }
+
+--show continuity in each argument
+
+slide-33-prop : ∀ {D E F}
+  → (f : (poset.A (domain.pos D)) × (poset.A (domain.pos E)) → poset.A (domain.pos F))
+  → (∀ {d d′} → ∀ {e} → (poset.R (domain.pos D)) d d′ → (poset.R (domain.pos F)) (f ⟨ d , e ⟩ ) (f ⟨ d′ , e ⟩))
+  → (∀ {d} → ∀ {e e′} → (poset.R (domain.pos E)) e e′ → (poset.R (domain.pos F)) (f ⟨ d , e ⟩ ) (f ⟨ d , e′ ⟩))
+  → monotone-fun (domain.pos (domain-product D E)) (domain.pos F)
+slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2 = record { g = f
+                                                         ; mon = λ { {a} {b} ⟨ m≤m′ , n≤n′ ⟩ → poset.transitive (domain.pos F) (mon-arg-1 m≤m′) (mon-arg-2 n≤n′)}
+                                                         }
+
+--slide-33-prop-cont : ∀ {D E F}
+--  → (f : (poset.A (domain.pos D)) × (poset.A (domain.pos E)) → poset.A (domain.pos F))
+--  → (∀ {d d′ : poset.A (domain.pos D)} → (e : poset.A (domain.pos E)) → (poset.R (domain.pos D)) d d′ → (poset.R (domain.pos F)) (f ⟨ d , e ⟩ ) (f ⟨ d′ , e ⟩))
+--  → (∀ {d} → (e e′ : poset.A (domain.pos E)) → (poset.R (domain.pos E)) e e′ → (poset.R (domain.pos F)) (f ⟨ d , e ⟩ ) (f ⟨ d , e′ ⟩))  
+--  → cont-fun (domain-product D E) F
+
+if-g : ∀ {D} → poset.A (posets2.product-pos 𝔹⊥ (domain-product D D)) → poset.A (domain.pos D)
+if-g {D} ⟨ ⊥₁ , _ ⟩ = posets2.least-element.⊥ (domain.bottom D)
+if-g ⟨ inj false , ⟨ _ , d′ ⟩ ⟩ = d′
+if-g ⟨ inj true , ⟨ d , _ ⟩ ⟩ = d
+
+if-mon-first : ∀ {D} → ∀ {b b′} → ∀ {e} → (poset.R (domain.pos 𝔹⊥)) b b′ → (poset.R (domain.pos D)) (if-g {D} ⟨ b , e ⟩ ) (if-g {D} ⟨ b′ , e ⟩)
+if-mon-first {D} z≼n = posets2.least-element.⊥-is-bottom (domain.bottom D)
+if-mon-first {D} x≼x = poset.reflexive (domain.pos D)
+
+if-mon-second : ∀ {D} → ∀ {b} → ∀ {e e′} → (poset.R (domain.pos (domain-product D D))) e e′ → (poset.R (domain.pos D)) (if-g {D} ⟨ b , e ⟩ ) (if-g {D} ⟨ b , e′ ⟩)
+if-mon-second {D} {b = ⊥₁} x = posets2.least-element.⊥-is-bottom (domain.bottom D)
+if-mon-second {b = inj false} ⟨ _ , n≤n′ ⟩ = n≤n′
+if-mon-second {b = inj true} ⟨ m≤m′ , _ ⟩ = m≤m′
+
 if-cont {D} = record { mon = if-mon {D}
-                     ; lub-preserve = {!!}
+                     ; lub-preserve = λ c → {!!}
                      }
+cur-cont : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → cont-fun D′ (function-domain D E)
+cur-mon : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → monotone-fun (domain.pos D′) (domain.pos (function-domain D E))
+cur-mon {D} {D′} {E} f =
+  record { g = λ d′ →
+    record { mon =
+      record { g = λ d → monotone-fun.g (cont-fun.mon f) ⟨ d′ , d ⟩
+             ; mon = λ a≤a′ → monotone-fun.mon (cont-fun.mon f) ⟨ (poset.reflexive (domain.pos D′)) , a≤a′ ⟩
+             }
+           ; lub-preserve = {!!}
+           }
+         ; mon = λ a≤a′ → λ {d} → monotone-fun.mon (cont-fun.mon f) ⟨ a≤a′ , poset.reflexive (domain.pos D) ⟩
+         }
+         
+
 
 ev-cont : ∀ {D E} → cont-fun (domain-product (function-domain D E) D) E
 ev-mon : ∀ {D E} → monotone-fun (posets2.product-pos (function-domain D E) D) (domain.pos E)
@@ -426,9 +480,122 @@ ev-mon {D} {E} = record { g = λ {⟨ f , d ⟩ → monotone-fun.g (cont-fun.mon
                             (monotone-fun.mon (cont-fun.mon f) d≤d′)
                             (f≤f′ {d′}) }
                         }
-ev-cont = record { mon = ev-mon
-                 ; lub-preserve = {!!}
-                 }
+ev-lub-preserve : ∀ {D E}
+  → (c : chain (posets2.product-pos (function-domain D E) D))
+  → (monotone-fun.g ev-mon)
+    ⟨
+      posets2.function-domain-⊔ D E (posets2.proj₁-chain {function-domain D E} {D} c)
+    ,
+      posets2.lub.⊔ (domain.chain-complete D (posets2.proj₂-chain {function-domain D E} {D} c))
+    ⟩
+    ≡ posets2.lub.⊔ (domain.chain-complete E (chain-map c ev-mon))
+
+fₙ,dₙ→fₙ[dₙ] : ∀ {D} {E} → (c : chain (posets2.product-pos (function-domain D E) D)) → chain (domain.pos E)
+fₙ,dₙ→fₙ[dₙ] c = chain-map c ev-mon
+
+fₙ,dₙ→fₙ[⊔dₙ] : ∀ {D} {E} → (c : chain (posets2.product-pos (function-domain D E) D)) → chain (domain.pos E)
+fₙ,dₙ→fₙ[⊔dₙ] {D} {E} c =
+  let D→E = function-domain D E in
+  let f = monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) in
+  let ⊔dₙ = (posets2.lub.⊔ (domain.chain-complete D (posets2.proj₂-chain {D→E} {D} c))) in
+  record
+  { monotone =
+    record { g = λ n → monotone-fun.g (cont-fun.mon (f n)) ⊔dₙ
+           ; mon = λ a≤a′ → monotone-fun.mon (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) a≤a′
+           }
+  }
+
+fₙ,dₙ→⊔ⱼfᵢdⱼ :  ∀ {D} {E} → (c : chain (posets2.product-pos (function-domain D E) D)) → chain (domain.pos E)
+
+fₙ,dₙ→⊔ⱼfᵢdⱼ {D}{E} c =
+  let D→E = function-domain D E in
+  record
+  { monotone =
+    record { g = λ i → posets2.lub.⊔ ((domain.chain-complete E) (chain-map (posets2.proj₂-chain {D→E} {D} c) (cont-fun.mon (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) i))))
+           ; mon = λ {a} {a′} a≤a′ →
+             posets2.same-f-same-lub-≤ E
+               (chain-map (posets2.proj₂-chain {D→E} {D} c) (cont-fun.mon (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) a))) (chain-map (posets2.proj₂-chain {D→E} {D} c)
+                                                                                                                            (cont-fun.mon
+                                                                                                                             (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) a′)))
+               λ n →
+                 monotone-fun.mon (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) a≤a′ {monotone-fun.g (chain.monotone (posets2.proj₂-chain {D→E} {D} c)) n}
+           }
+  }
+
+double-index-fun : ∀ {D} {E} → (c : chain (posets2.product-pos (function-domain D E) D)) → monotone-fun posets2.nats²-pos (domain.pos E)
+double-index-g : ∀ {D} {E} → (c : chain (posets2.product-pos (function-domain D E) D)) → ℕ × ℕ → poset.A (domain.pos E) 
+double-index-g {D} {E} c ⟨ m , n ⟩ =
+  let D→E = function-domain D E in
+  monotone-fun.g (cont-fun.mon (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) m)) (monotone-fun.g (chain.monotone (posets2.proj₂-chain {D→E} {D} c))n)   
+
+double-index-fun {D} {E} c =
+  let D→E = function-domain D E in
+  record
+    { g = double-index-g c 
+    ; mon = λ { {⟨ m , n ⟩} {⟨ m′ , n′ ⟩} ⟨ m≤m′ , n≤n′ ⟩ →
+                poset.transitive (domain.pos E)
+                  ((monotone-fun.mon (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) m≤m′ {monotone-fun.g (chain.monotone (posets2.proj₂-chain {D→E} {D} c)) n}))
+                  ((monotone-fun.mon (cont-fun.mon (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) m′)) (monotone-fun.mon (chain.monotone (posets2.proj₂-chain {D→E} {D} c)) n≤n′)))
+              }
+    }
+
+ev-lub-preserve {D} {E} c =
+  let ev = monotone-fun.g ev-mon in
+  let D→E = function-domain D E in
+  let fₙ-chain = (posets2.proj₁-chain {D→E} {D} c) in
+  let ⊔fₙ = posets2.function-domain-⊔ D E (posets2.proj₁-chain {D→E} {D} c) in
+  let ⊔dₙ = posets2.lub.⊔ (domain.chain-complete D (posets2.proj₂-chain {D→E} {D} c)) in
+  let ev[⊔fₙ,⊔dₙ] = ev ⟨ ⊔fₙ , ⊔dₙ ⟩ in
+  let [⊔fₙ][⊔dₙ] = monotone-fun.g (cont-fun.mon ⊔fₙ) ⊔dₙ in
+  let ⊔[fₙ[⊔dₙ]] = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→fₙ[⊔dₙ] c)) in
+  let ⊔⊔fᵢdⱼ = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→⊔ⱼfᵢdⱼ c)) in
+  let ⊔fₙdₙ = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→fₙ[dₙ] c)) in
+  let ⊔ev[fₙ,dₙ] = posets2.lub.⊔ (domain.chain-complete E (chain-map c ev-mon)) in
+  begin
+    ev[⊔fₙ,⊔dₙ]
+  ≡⟨ refl ⟩
+    [⊔fₙ][⊔dₙ]
+  ≡⟨ posets2.same-f-same-lub E
+      (posets2.chain-of-fₙ[d] D E (posets2.proj₁-chain {D→E} {D} c)
+        (posets2.lub.⊔ (domain.chain-complete D (posets2.proj₂-chain {D→E} {D} c))))
+      (fₙ,dₙ→fₙ[⊔dₙ] c)
+      refl
+   ⟩
+    ⊔[fₙ[⊔dₙ]]
+  ≡⟨ posets2.same-f-same-lub E
+    (fₙ,dₙ→fₙ[⊔dₙ] c)
+    (fₙ,dₙ→⊔ⱼfᵢdⱼ c)
+    (posets2.function-extensionality
+      λ n → cont-fun.lub-preserve (monotone-fun.g (chain.monotone fₙ-chain) n) (posets2.proj₂-chain {D→E} {D} c))
+   ⟩
+    ⊔⊔fᵢdⱼ
+  ≡⟨ posets2.same-f-same-lub E
+      (fₙ,dₙ→⊔ⱼfᵢdⱼ c)
+      (posets2.chain-⊔fₖₙ-with-n-fixed E (double-index-fun c))
+      (posets2.function-extensionality
+        λ n → posets2.same-f-same-lub E
+              (chain-map (posets2.proj₂-chain {D→E} {D} c) (cont-fun.mon (monotone-fun.g (chain.monotone (posets2.proj₁-chain {D→E} {D} c)) n)))
+              (posets2.chain-fₘₙ-with-n-fixed E (double-index-fun c) n)
+              (posets2.function-extensionality λ m → {!!}))
+   ⟩
+    posets2.lub.⊔ (domain.chain-complete E (posets2.chain-⊔fₖₙ-with-n-fixed E (double-index-fun c)))
+  ≡⟨ posets2.diagonalising-lemma-2 E (double-index-fun c) ⟩
+    posets2.lub.⊔ (domain.chain-complete E (posets2.fₖₖ-chain E (double-index-fun c)))
+  ≡⟨ posets2.same-f-same-lub E
+    (posets2.fₖₖ-chain E (double-index-fun c))
+    (fₙ,dₙ→fₙ[dₙ] c)
+    (posets2.function-extensionality
+      λ n → refl)
+   ⟩ 
+    ⊔fₙdₙ
+  ≡⟨ refl ⟩
+    ⊔ev[fₙ,dₙ]
+  ∎
+
+
+ev-cont {D} {E} = record { mon = ev-mon
+                         ; lub-preserve = ev-lub-preserve
+                         }
 
 
 constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
@@ -444,17 +611,7 @@ constant-fun B b = constant-fun-is-cont b
 ⟦ Γ ⊢′ `suc N ⟧ = s⊥ ∘ ⟦ Γ ⊢′ N ⟧
 ⟦ Γ ⊢′ `pred N ⟧ = p⊥ ∘ ⟦ Γ ⊢′ N ⟧
 ⟦ Γ ⊢′ if M₁ then M₂ else M₃ ⟧ = if-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ (pair-f ⟦ Γ ⊢′ M₂ ⟧ ⟦ Γ ⊢′ M₃ ⟧))
-⟦ Γ ⊢′ ` x ⟧ = record { mon = record { g = λ ρ → {! ρ !}
-                                     ; mon = {!!}
-                                     }
-                      ; lub-preserve = {!!}
-                      }
-⟦ Γ ⊢′ ƛ M ⟧ = record { mon = record { g = λ ρ → record
-                                                 { mon = record { g = λ d → {!!}
-                                                                ; mon = {!!}
-                                                                }
-                                                 ; lub-preserve = {!!}
-                                                 }
-                                     ; mon = {!!} }
-                      ; lub-preserve = {!!} }
+-- Frame as if is last one and recurse on Γ? 
+⟦ Γ ⊢′ ` x ⟧ = {!!}
+⟦ Γ ⊢′ ƛ M ⟧ = cur-cont ⟦ {!!} ⊢′ M ⟧
 ⟦ Γ ⊢′ μ M ⟧ = tarski-continuous ∘ ⟦ Γ ⊢′ M ⟧ 
