@@ -300,6 +300,10 @@ p zero = ⊥₁
 p (suc n) = inj n
 p⊥ = extend-function p
 
+p⊥-inv-s⊥ : {x : posets2.B⊥ ℕ} → monotone-fun.g (cont-fun.mon p⊥) ((monotone-fun.g (cont-fun.mon s⊥)) x) ≡ x
+p⊥-inv-s⊥ {⊥₁} = refl
+p⊥-inv-s⊥ {inj zero} = refl
+p⊥-inv-s⊥ {inj (suc x)} = refl
 
 constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
 constant-fun B b = constant-fun-is-cont b
@@ -342,13 +346,20 @@ project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x)= project-x′ Γ Γ�
 term-⟦_⟧ : ∀ {A} → (M : ∅ ⊢ A) → cont-fun context-⟦ ∅ ⟧ ⟦ A ⟧
 term-⟦ M ⟧ = ⟦ ∅ ⊢′ M ⟧
 
+if-true : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁}
+  → (monotone-fun.g (cont-fun.mon if-cont) (monotone-fun.g (cont-fun.mon (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧))) x)) ≡ (monotone-fun.g (cont-fun.mon term-⟦ V ⟧) x)
+
+if-false : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁} 
+  → (monotone-fun.g (cont-fun.mon if-cont) (monotone-fun.g (cont-fun.mon (pair-f term-⟦ `false ⟧ (pair-f term-⟦ y ⟧ term-⟦ V ⟧))) x)) ≡ (monotone-fun.g (cont-fun.mon term-⟦ V ⟧) x)
+
+
 soundness : ∀ {A} → {M : ∅ ⊢ A} {V : ∅ ⊢ A} → (step : M —→ V) → term-⟦ M ⟧ ≡ term-⟦ V ⟧
 soundness (ξ-·₁ {L = L} {L′} {M} L→L′) =
   begin
     term-⟦ L · M ⟧
   ≡⟨ refl ⟩
     ev-cont ∘ pair-f term-⟦ L ⟧ term-⟦ M ⟧
-  ≡⟨ {!!} ⟩
+  ≡⟨ cong (_∘_ ev-cont) (cong (λ x → pair-f x term-⟦ M ⟧) (soundness L→L′)) ⟩
     ev-cont ∘ pair-f term-⟦ L′ ⟧ term-⟦ M ⟧
   ≡⟨ refl ⟩
     term-⟦ L′ · M ⟧
@@ -358,9 +369,9 @@ soundness (ξ-·₂ {V = V} {M} {M′} v M→M′) =
     term-⟦ V · M ⟧
   ≡⟨ refl ⟩
     ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M ⟧
-  ≡⟨ {!!} ⟩
+  ≡⟨ cong (_∘_ ev-cont) (cong (pair-f term-⟦ V ⟧) (soundness M→M′)) ⟩
     ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M′ ⟧
-  ≡⟨ {!!} ⟩
+  ≡⟨ refl ⟩
     term-⟦ V · M′ ⟧
   ∎
 soundness (β-ƛ {N = N} {W} v) =
@@ -397,7 +408,7 @@ soundness {V = V} (β-pred₂ v) =
     term-⟦ `pred (`suc V) ⟧
   ≡⟨ refl ⟩
     (p⊥ ∘ (s⊥ ∘ term-⟦ V ⟧))
-  ≡⟨ {!!} ⟩
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → p⊥-inv-s⊥) ⟩
     term-⟦ V ⟧
   ∎ 
 soundness (ξ-if {B = B} {B′} {x} {y} B→B′) =
@@ -405,41 +416,47 @@ soundness (ξ-if {B = B} {B′} {x} {y} B→B′) =
     term-⟦ if B then x else y ⟧
   ≡⟨ refl ⟩
     if-cont ∘ (pair-f term-⟦ B ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧))
-  ≡⟨ {!!} ⟩
+  ≡⟨ cong (_∘_ if-cont) (cong (λ b → pair-f b (pair-f term-⟦ x ⟧ term-⟦ y ⟧)) (soundness B→B′)) ⟩
     (if-cont ∘ (pair-f term-⟦ B′ ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧)))
   ≡⟨ refl ⟩
     term-⟦ if B′ then x else y ⟧
   ∎
-soundness {V = V} (β-if₁ {y = y}) =
+soundness {A} {V = V} (β-if₁ {y = y}) =
   begin
     term-⟦ if `true then V else y ⟧
   ≡⟨ refl ⟩
     (if-cont ∘ (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧)) )
-  ≡⟨ {!!} ⟩
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → if-true {⊥} {A} {V} {y}) ⟩
     term-⟦ V ⟧
   ∎
-soundness {V = V} (β-if₂ {x = x}) =
+soundness {A} {V = V} (β-if₂ {x = x}) =
   begin
     term-⟦ if `false then x else V ⟧
-  ≡⟨ {!!} ⟩
+  ≡⟨ refl ⟩
     if-cont ∘ (pair-f term-⟦ `false ⟧ (pair-f term-⟦ x ⟧ term-⟦ V ⟧))
-  ≡⟨ {!!} ⟩
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → if-false {⊥} {A} {V} {x}) ⟩
     term-⟦ V ⟧
   ∎
 soundness (β-μ {N = N}) =
   begin
     term-⟦ μ N ⟧
   ≡⟨ refl ⟩
-    (tarski-continuous ∘ term-⟦ N ⟧ )
+    tarski-continuous ∘ term-⟦ N ⟧
   ≡⟨ {!!} ⟩
+    (ev-cont ∘ pair-f term-⟦ N ⟧ (tarski-continuous ∘ term-⟦ N ⟧))
+  ≡⟨ refl ⟩
+    (ev-cont ∘ (pair-f term-⟦ N ⟧ term-⟦ μ N ⟧))
+  ≡⟨ refl ⟩
     term-⟦ N · (μ N) ⟧
   ∎
-soundness (ξ-is-zero {M = M} {M′} a) =
+soundness (ξ-is-zero {M = M} {M′} M→M′) =
   begin
     term-⟦ `is-zero M ⟧
   ≡⟨ refl ⟩
-    (z⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ {!!} ⟩
+    z⊥ ∘ term-⟦ M ⟧
+  ≡⟨ cong (_∘_ z⊥) (soundness M→M′) ⟩
+    z⊥ ∘ term-⟦ M′ ⟧
+  ≡⟨ refl ⟩
     term-⟦ `is-zero M′ ⟧
   ∎
 soundness β-is-zero₁ =
@@ -447,16 +464,22 @@ soundness β-is-zero₁ =
     term-⟦ `is-zero `zero ⟧
   ≡⟨ refl ⟩
     z⊥ ∘ term-⟦ `zero ⟧
-  ≡⟨ {!!} ⟩
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → refl) ⟩
     term-⟦ `true ⟧
   ∎
-soundness (β-is-zero₂ {M = M} x) =
+soundness (β-is-zero₂ {M = `zero} x) =
   begin
-    term-⟦ `is-zero (`suc M) ⟧
+    term-⟦ `is-zero (`suc `zero) ⟧
   ≡⟨ refl ⟩
-    z⊥ ∘ term-⟦ `suc M ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → {!!}) ⟩
+    z⊥ ∘ (s⊥ ∘ term-⟦ `zero ⟧)
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → refl) ⟩
     term-⟦ `false ⟧
   ∎
+soundness (β-is-zero₂ {M = `suc M} x) =
+   begin
+     term-⟦ `is-zero (`suc (`suc M)) ⟧
+   ≡⟨ refl ⟩
+     (z⊥ ∘ (s⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)) )
+   ≡⟨ {!!} ⟩
+     term-⟦ `false ⟧
+    ∎

@@ -109,7 +109,7 @@ open domain
 
 product-equality : {S₁ S₂ : Set} {a a′ : S₁} {b b′ : S₂} → a ≡ a′ → b ≡ b′ → (a , b) ≡ (a′ , b′)
 product-equality {a} {a′} {b} {b′} Eq.refl Eq.refl = Eq.refl
-dependent-product-equality : {I : Set} → (f : I → domain) { (i : I) → 
+--dependent-product-equality : {I : Set} → (f : I → domain) { (i : I) → 
 
 
 domain-product : domain → domain → domain
