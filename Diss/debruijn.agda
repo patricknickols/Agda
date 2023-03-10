@@ -3,7 +3,7 @@ module debruijn where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
-open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; z≼n; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B; tarski-continuous; product-equality)
+open import posets2 using (domain; flat-domain; chain; monotone-fun; inj; x≼x; z≼n; function-domain; cont-fun; ⊥₁; tarski-fix; least-pre-fixed; domain-product; poset; chain-map; chain-complete-flat-domain-pos-B; tarski-continuous; product-equality; Fin; fzero; fsucc)
 open import useful-functions using (ℕ⊥; 𝔹⊥; _∘_; constant-fun-is-cont; pair-f; extend-function; ev-cont; if-cont; cur-cont; domain-dependent-projection)
 open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_)
 open import Data.Empty using (⊥; ⊥-elim)
@@ -93,23 +93,15 @@ length : Context → ℕ
 length ∅ = zero
 length (Γ , _) = suc (length Γ)
 
-data Fin : ℕ → Set where
-  fzero : {n : ℕ} → Fin (suc n)
-  fsucc : {n : ℕ} → Fin n → Fin (suc n)
-
-conv : {n : ℕ} → Fin n → ℕ
-conv fzero = 0
-conv (fsucc x) = suc (conv x)
-
 lookup : {Γ : Context} → {n : ℕ} → (p : n < length Γ) → Type
 lookup {(_ , A)} {zero} (s≤s z≤n) = A
 lookup {(Γ , _)} {suc n} (s≤s p) = lookup p
 
-lookup₂ : {Γ : Context} → {n : Fin (length Γ)} → Type
-lookup₂ {(_ , A)} {fzero} = A
-lookup₂ {(Γ , _)} {fsucc x} = lookup₂ {Γ} {x}
+lookup₂ : {Γ : Context} → (n : Fin (length Γ)) → Type
+lookup₂ {(_ , A)} (fzero) = A
+lookup₂ {(Γ , _)} (fsucc x) = lookup₂ {Γ} x
 
-count : ∀ {Γ} → {n : Fin (length Γ)} → Γ ∋ lookup₂ {Γ} {n}
+count : ∀ {Γ} → {n : Fin (length Γ)} → Γ ∋ lookup₂ {Γ} n
 count {Γ , x} {fzero} = Z
 count {Γ , x} {fsucc n} = S (count {Γ} {n})
 
@@ -276,57 +268,20 @@ progress (if B then M else N) with progress B
 progress (μ M) = step β-μ
 
 
-infix 3 _⊢_↓_
-
-data _⊢_↓_ : ∀{Γ A} → Γ ⊢ A → Set where
-
 ⟦_⟧ : Type → domain
 ⟦ `ℕ ⟧ = ℕ⊥
 ⟦ `bool ⟧ = 𝔹⊥
 ⟦ τ ⇒ τ′ ⟧ = function-domain ⟦ τ ⟧ ⟦ τ′ ⟧
 
-
-data ⊥-set : Set where
-  ⊥₂ : ⊥-set
-
-data _⊥≼_ : ⊥-set → ⊥-set → Set where
-  ⊥≼⊥ : ⊥₂ ⊥≼ ⊥₂ 
-
-⊥≼-refl : {a : ⊥-set} → a ⊥≼ a
-⊥≼-refl {⊥₂} = ⊥≼⊥
-
-⊥≼-antisym : {a b : ⊥-set} → a ⊥≼ b → b ⊥≼ a → a ≡ b
-⊥≼-antisym ⊥≼⊥ ⊥≼⊥ = refl
-
-⊥≼-trans : {a b c : ⊥-set} → a ⊥≼ b → b ⊥≼ c → a ⊥≼ c
-⊥≼-trans ⊥≼⊥ ⊥≼⊥ = ⊥≼⊥
-
-⊥-is-top : ∀ {a : ⊥-set} → a ⊥≼ ⊥₂
-⊥-is-top {⊥₂} = ⊥≼⊥
-
 context-⟦_⟧ : Context → domain
-context-⟦ ∅ ⟧ = record { pos = record
-                         { A = ⊥-set
-                         ; R = _⊥≼_
-                         ; reflexive = ⊥≼-refl
-                         ; antisymmetric = ⊥≼-antisym
-                         ; transitive = ⊥≼-trans
-                         }
-                       ; chain-complete = λ c → record
-                         { ⊔ = ⊥₂
-                         ; lub1 = λ {n} → ⊥-is-top
-                         ; lub2 = λ { {⊥₂} → λ x → ⊥≼⊥}
-                         }
-                       ; bottom = record
-                         { ⊥ = ⊥₂
-                         ; ⊥-is-bottom = λ { {⊥₂} → ⊥≼⊥ }
-                         }
-                       }
+context-⟦ Γ ⟧ = posets2.domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
 
-context-⟦ Γ , x ⟧ = domain-product context-⟦ Γ ⟧ ⟦ x ⟧
-
-context₂-⟦_⟧ : Context → domain
-context₂-⟦ Γ ⟧ = posets2.domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} {x} ⟧)
+helpful-lemma-blah : {Γ : Context} {A B : Type} → cont-fun (context-⟦ Γ , A ⟧) ⟦ B ⟧ → cont-fun (domain-product context-⟦ Γ ⟧ ⟦ A ⟧) ⟦ B ⟧
+helpful-lemma-blah f = record { mon = record { g = λ x → monotone-fun.g (cont-fun.mon f) λ {fzero → x (fsucc fzero); (fsucc n) → x fzero n}
+                                             ; mon = λ a≤a′ → monotone-fun.mon (cont-fun.mon f) λ {fzero → a≤a′ (fsucc fzero); (fsucc n) → a≤a′ fzero n}
+                                             }
+                              ; lub-preserve = λ c → {!!}
+                              }
 
 s⊥ : cont-fun ℕ⊥ ℕ⊥
 s : ℕ → poset.A (domain.pos ℕ⊥)
@@ -349,6 +304,27 @@ p⊥ = extend-function p
 constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
 constant-fun B b = constant-fun-is-cont b
 
+conv : ∀ {x} → {Γ : Context} → (Γ ∋ x) → Fin (length Γ)
+conv Z = fzero
+conv (S Γ∋x) = fsucc (conv Γ∋x)
+
+
+project-x′ : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
+                                                (posets2.domain-dependent-product (Fin (length Γ))
+                                                  (λ x → ⟦ lookup₂ {Γ} x ⟧))
+                                                ⟦ lookup₂ (conv Γ∋x) ⟧
+project-x′ {x} Γ Γ∋x =  domain-dependent-projection (Fin (length Γ)) (λ x → ⟦ lookup₂ x ⟧) (conv Γ∋x)
+
+project-x-lemma : ∀ {x} → {Γ : Context} → (Γ∋x : Γ ∋ x) → lookup₂ (conv Γ∋x) ≡ x
+project-x-lemma Z = refl
+project-x-lemma (S Γ∋x) = project-x-lemma Γ∋x
+
+project-x : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
+                                                (posets2.domain-dependent-product (Fin (length Γ))
+                                                  (λ x → ⟦ lookup₂ {Γ} x ⟧))
+                                                ⟦ x ⟧
+project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x)= project-x′ Γ Γ∋x
+
 
 ⟦_⊢′_⟧ : ∀ {A} → (Γ : Context) → (M : Γ ⊢ A) → cont-fun context-⟦ Γ ⟧ ⟦ A ⟧
 ⟦ Γ ⊢′ `zero ⟧ = constant-fun {Γ} ℕ 0
@@ -359,6 +335,128 @@ constant-fun B b = constant-fun-is-cont b
 ⟦ Γ ⊢′ `suc N ⟧ = s⊥ ∘ ⟦ Γ ⊢′ N ⟧
 ⟦ Γ ⊢′ `pred N ⟧ = p⊥ ∘ ⟦ Γ ⊢′ N ⟧
 ⟦ Γ ⊢′ if M₁ then M₂ else M₃ ⟧ = if-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ (pair-f ⟦ Γ ⊢′ M₂ ⟧ ⟦ Γ ⊢′ M₃ ⟧))
-⟦ Γ ⊢′ ` x ⟧ = {!!}
-⟦ Γ ⊢′ ƛ_ {A = A} M ⟧ = cur-cont ⟦ Γ , A ⊢′ M ⟧
+⟦ Γ ⊢′ ` x ⟧ = project-x Γ x
+⟦ Γ ⊢′ ƛ_ {A = A} {B} M ⟧ = cur-cont (helpful-lemma-blah {Γ} {A} {B} ⟦ Γ , A ⊢′ M ⟧)
 ⟦ Γ ⊢′ μ M ⟧ = tarski-continuous ∘ ⟦ Γ ⊢′ M ⟧ 
+
+term-⟦_⟧ : ∀ {A} → (M : ∅ ⊢ A) → cont-fun context-⟦ ∅ ⟧ ⟦ A ⟧
+term-⟦ M ⟧ = ⟦ ∅ ⊢′ M ⟧
+
+soundness : ∀ {A} → {M : ∅ ⊢ A} {V : ∅ ⊢ A} → (step : M —→ V) → term-⟦ M ⟧ ≡ term-⟦ V ⟧
+soundness (ξ-·₁ {L = L} {L′} {M} L→L′) =
+  begin
+    term-⟦ L · M ⟧
+  ≡⟨ refl ⟩
+    ev-cont ∘ pair-f term-⟦ L ⟧ term-⟦ M ⟧
+  ≡⟨ {!!} ⟩
+    ev-cont ∘ pair-f term-⟦ L′ ⟧ term-⟦ M ⟧
+  ≡⟨ refl ⟩
+    term-⟦ L′ · M ⟧
+  ∎
+soundness (ξ-·₂ {V = V} {M} {M′} v M→M′) =
+  begin
+    term-⟦ V · M ⟧
+  ≡⟨ refl ⟩
+    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M ⟧
+  ≡⟨ {!!} ⟩
+    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M′ ⟧
+  ≡⟨ {!!} ⟩
+    term-⟦ V · M′ ⟧
+  ∎
+soundness (β-ƛ {N = N} {W} v) =
+  begin
+    term-⟦ (ƛ N) · W ⟧
+  ≡⟨ refl ⟩
+    ev-cont ∘ pair-f term-⟦ ƛ N ⟧ term-⟦ W ⟧
+  ≡⟨ {!!} ⟩
+    term-⟦ N [ W ] ⟧
+  ∎
+soundness (ξ-suc {M = M} {M′} M→M′) =
+  begin
+    term-⟦ `suc M ⟧
+  ≡⟨ refl ⟩
+    (s⊥ ∘ term-⟦ M ⟧)
+  ≡⟨ cong (_∘_ s⊥) (soundness M→M′) ⟩
+    (s⊥ ∘ term-⟦ M′ ⟧)
+  ≡⟨ refl ⟩
+    term-⟦ `suc M′ ⟧
+  ∎
+soundness (ξ-pred {M = M} {M′} M→M′) =
+  begin
+    term-⟦ `pred M ⟧
+  ≡⟨ refl ⟩
+    (p⊥ ∘ term-⟦ M ⟧)
+  ≡⟨ cong (_∘_ p⊥) (soundness M→M′) ⟩
+    (p⊥ ∘ term-⟦ M′ ⟧)
+  ≡⟨ refl ⟩
+    term-⟦ `pred M′ ⟧
+  ∎
+soundness β-pred₁ = {!!}
+soundness {V = V} (β-pred₂ v) =
+  begin
+    term-⟦ `pred (`suc V) ⟧
+  ≡⟨ refl ⟩
+    (p⊥ ∘ (s⊥ ∘ term-⟦ V ⟧))
+  ≡⟨ {!!} ⟩
+    term-⟦ V ⟧
+  ∎ 
+soundness (ξ-if {B = B} {B′} {x} {y} B→B′) =
+  begin
+    term-⟦ if B then x else y ⟧
+  ≡⟨ refl ⟩
+    if-cont ∘ (pair-f term-⟦ B ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧))
+  ≡⟨ {!!} ⟩
+    (if-cont ∘ (pair-f term-⟦ B′ ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧)))
+  ≡⟨ refl ⟩
+    term-⟦ if B′ then x else y ⟧
+  ∎
+soundness {V = V} (β-if₁ {y = y}) =
+  begin
+    term-⟦ if `true then V else y ⟧
+  ≡⟨ refl ⟩
+    (if-cont ∘ (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧)) )
+  ≡⟨ {!!} ⟩
+    term-⟦ V ⟧
+  ∎
+soundness {V = V} (β-if₂ {x = x}) =
+  begin
+    term-⟦ if `false then x else V ⟧
+  ≡⟨ {!!} ⟩
+    if-cont ∘ (pair-f term-⟦ `false ⟧ (pair-f term-⟦ x ⟧ term-⟦ V ⟧))
+  ≡⟨ {!!} ⟩
+    term-⟦ V ⟧
+  ∎
+soundness (β-μ {N = N}) =
+  begin
+    term-⟦ μ N ⟧
+  ≡⟨ refl ⟩
+    (tarski-continuous ∘ term-⟦ N ⟧ )
+  ≡⟨ {!!} ⟩
+    term-⟦ N · (μ N) ⟧
+  ∎
+soundness (ξ-is-zero {M = M} {M′} a) =
+  begin
+    term-⟦ `is-zero M ⟧
+  ≡⟨ refl ⟩
+    (z⊥ ∘ term-⟦ M ⟧)
+  ≡⟨ {!!} ⟩
+    term-⟦ `is-zero M′ ⟧
+  ∎
+soundness β-is-zero₁ =
+  begin
+    term-⟦ `is-zero `zero ⟧
+  ≡⟨ refl ⟩
+    z⊥ ∘ term-⟦ `zero ⟧
+  ≡⟨ {!!} ⟩
+    term-⟦ `true ⟧
+  ∎
+soundness (β-is-zero₂ {M = M} x) =
+  begin
+    term-⟦ `is-zero (`suc M) ⟧
+  ≡⟨ refl ⟩
+    z⊥ ∘ term-⟦ `suc M ⟧
+  ≡⟨ refl ⟩
+    z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → {!!}) ⟩
+    term-⟦ `false ⟧
+  ∎

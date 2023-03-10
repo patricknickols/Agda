@@ -7,6 +7,10 @@ open Eq using (_≡_)
 open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; s≤s; z≤n)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 
+data Fin : ℕ → Set where
+  fzero : {n : ℕ} → Fin (suc n)
+  fsucc : {n : ℕ} → Fin n → Fin (suc n)
+
 refl-≤ : ∀ {n : ℕ} → n ≤ n
 antisym-≤ : ∀ {n m : ℕ} → n ≤ m → m ≤ n → n ≡ m
 trans-≤ : ∀ {m n p : ℕ} → m ≤ n → n ≤ p → m ≤ p
@@ -105,6 +109,8 @@ open domain
 
 product-equality : {S₁ S₂ : Set} {a a′ : S₁} {b b′ : S₂} → a ≡ a′ → b ≡ b′ → (a , b) ≡ (a′ , b′)
 product-equality {a} {a′} {b} {b′} Eq.refl Eq.refl = Eq.refl
+dependent-product-equality : {I : Set} → (f : I → domain) { (i : I) → 
+
 
 domain-product : domain → domain → domain
 
@@ -142,23 +148,27 @@ proj₂-chain c = record { monotone = record { g = λ n → proj₂ ((g (monoton
                        }
 
 
-domain-product D₁ D₂ = record { pos = product-pos D₁ D₂
-                              ; chain-complete = λ c → record
-                                { ⊔ = ⊔ ((chain-complete D₁) (proj₁-chain {D₁} {D₂} c)) , ⊔ ((chain-complete D₂) (proj₂-chain {D₁} {D₂} c))
-                                ; lub1 = lub1 ((chain-complete D₁) (proj₁-chain {D₁} {D₂} c)) , lub1 ((chain-complete D₂) (proj₂-chain {D₁} {D₂} c))
-                                ; lub2 = λ x → (lub2 (chain-complete D₁ (proj₁-chain {D₁} {D₂} c)) λ {n} → proj₁ (x {n})) , (lub2 (chain-complete D₂ (proj₂-chain {D₁} {D₂} c)) λ {n} → proj₂ (x {n}))
-                                }
-                              ; bottom = record { ⊥ = ⊥ (bottom D₁) , ⊥ (bottom D₂)
-                                                ; ⊥-is-bottom = (⊥-is-bottom (bottom D₁)) , (⊥-is-bottom (bottom D₂))
-                                                }
-                              }
-
+-- domain-product D₁ D₂ = record { pos = product-pos D₁ D₂
+--                                ; chain-complete = λ c → record
+--                                  { ⊔ = ⊔ ((chain-complete D₁) (proj₁-chain {D₁} {D₂} c)) , ⊔ ((chain-complete D₂) (proj₂-chain {D₁} {D₂} c))
+--                                  ; lub1 = lub1 ((chain-complete D₁) (proj₁-chain {D₁} {D₂} c)) , lub1 ((chain-complete D₂) (proj₂-chain {D₁} {D₂} c))
+--                                  ; lub2 = λ x → (lub2 (chain-complete D₁ (proj₁-chain {D₁} {D₂} c)) λ {n} → proj₁ (x {n})) , (lub2 (chain-complete D₂ (proj₂-chain {D₁} {D₂} c)) λ {n} → proj₂ (x {n}))
+--                                  }
+--                                ; bottom = record { ⊥ = ⊥ (bottom D₁) , ⊥ (bottom D₂)
+--                                                  ; ⊥-is-bottom = (⊥-is-bottom (bottom D₁)) , (⊥-is-bottom (bottom D₂))
+--                                                  }
+--                                }
+domain-projections : (D₁ D₂ : domain) → ((Fin 2) → domain)
+domain-projections D₁ D₂ fzero = D₁
+domain-projections D₁ D₂ (fsucc x) = D₂
 
 domain-dependent-product : (I : Set) → (I → domain) → domain
 domain-dependent-product-pos : (I : Set) → (I → domain) → poset
 domain-dependent-R : (I : Set) → (f : I → domain) → ((i : I) → (A (pos (f i))))  → ((i : I) → (A (pos (f i)))) → Set
+
 domain-dependent-R I f p₁ p₂ = (i : I) → R (pos (f i)) (p₁ i) (p₂ i)
 
+domain-product D₁ D₂ = domain-dependent-product (Fin 2) (domain-projections D₁ D₂)
 domain-dependent-refl : (I : Set) → (f : I → domain) → {p : (i : I) → (A (pos (f i)))} → domain-dependent-R I f p p
 domain-dependent-refl I f i = reflexive (pos (f i))
 
