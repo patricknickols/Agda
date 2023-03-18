@@ -296,7 +296,7 @@ z⊥ = extend-function z
 
 p⊥ : cont-fun ℕ⊥ ℕ⊥
 p : ℕ → poset.A (domain.pos ℕ⊥)
-p zero = ⊥₁
+p zero = inj zero
 p (suc n) = inj n
 p⊥ = extend-function p
 
@@ -327,7 +327,7 @@ project-x : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
                                                 (posets2.domain-dependent-product (Fin (length Γ))
                                                   (λ x → ⟦ lookup₂ {Γ} x ⟧))
                                                 ⟦ x ⟧
-project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x)= project-x′ Γ Γ∋x
+project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ∋x
 
 
 ⟦_⊢′_⟧ : ∀ {A} → (Γ : Context) → (M : Γ ⊢ A) → cont-fun context-⟦ Γ ⟧ ⟦ A ⟧
@@ -402,7 +402,7 @@ soundness (ξ-pred {M = M} {M′} M→M′) =
   ≡⟨ refl ⟩
     term-⟦ `pred M′ ⟧
   ∎
-soundness β-pred₁ = {!!}
+soundness β-pred₁ = posets2.cont-fun-extensionality (λ ⊥ → refl)
 soundness {V = V} (β-pred₂ v) =
   begin
     term-⟦ `pred (`suc V) ⟧
@@ -437,14 +437,16 @@ soundness {A} {V = V} (β-if₂ {x = x}) =
   ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → if-false {⊥} {A} {V} {x}) ⟩
     term-⟦ V ⟧
   ∎
-soundness (β-μ {N = N}) =
-  begin
-    term-⟦ μ N ⟧
-  ≡⟨ refl ⟩
-    tarski-continuous ∘ term-⟦ N ⟧
-  ≡⟨ {!!} ⟩
-    (ev-cont ∘ pair-f term-⟦ N ⟧ (tarski-continuous ∘ term-⟦ N ⟧))
-  ≡⟨ refl ⟩
+soundness {A} (β-μ {N = N}) =
+   begin
+     term-⟦ μ N ⟧
+   ≡⟨ refl ⟩
+     tarski-continuous ∘ term-⟦ N ⟧
+   ≡⟨ posets2.cont-fun-extensionality
+     (λ x → posets2.lfp-is-fixed { ⟦ A ⟧ } {monotone-fun.g (cont-fun.mon term-⟦ N ⟧) x})
+    ⟩
+     (ev-cont ∘ pair-f term-⟦ N ⟧ (tarski-continuous ∘ term-⟦ N ⟧))
+   ≡⟨ refl ⟩
     (ev-cont ∘ (pair-f term-⟦ N ⟧ term-⟦ μ N ⟧))
   ≡⟨ refl ⟩
     term-⟦ N · (μ N) ⟧
@@ -480,6 +482,47 @@ soundness (β-is-zero₂ {M = `suc M} x) =
      term-⟦ `is-zero (`suc (`suc M)) ⟧
    ≡⟨ refl ⟩
      (z⊥ ∘ (s⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)) )
-   ≡⟨ {!!} ⟩
+   ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → {!!} ) ⟩
      term-⟦ `false ⟧
     ∎
+
+∘-assoc : {D₀ D₁ D₂ D₃ : domain} {f : cont-fun D₂ D₃} {g : cont-fun D₁ D₂} {h : cont-fun D₀ D₁} → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
+∘-assoc {f} {g} {h} = posets2.cont-fun-extensionality λ ⊥ → refl
+
+lemma-blah-proof : ∀ {M} → Value M → z⊥ ∘ (term-⟦ `suc M ⟧) ≡ term-⟦ `false ⟧
+
+
+z⊥∘s⊥-inj-n : {n : ℕ} → monotone-fun.g (cont-fun.mon (z⊥ ∘ s⊥)) (inj n) ≡ inj false
+z⊥∘s⊥-inj-n = refl
+
+
+
+lemma-blah-proof {M} V-zero = 
+  begin
+    (z⊥ ∘ term-⟦ `suc M ⟧)
+  ≡⟨ refl ⟩
+    z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)
+  ≡⟨ Eq.sym (∘-assoc {f = z⊥} {g = s⊥} {h = term-⟦ M ⟧}) ⟩
+    (z⊥ ∘ s⊥) ∘ term-⟦ M ⟧
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → refl) ⟩
+    term-⟦ `false ⟧
+  ∎
+lemma-blah-proof {.(`suc V)} (V-suc {V = V} val-M) =
+  begin
+    (z⊥ ∘ term-⟦ `suc (`suc V) ⟧)
+  ≡⟨ refl ⟩
+    (z⊥ ∘ (s⊥ ∘ term-⟦ `suc V ⟧))
+  ≡⟨ Eq.sym (∘-assoc { f = z⊥} { s⊥ } { term-⟦ `suc V ⟧ }) ⟩
+    ((z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧)
+  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ →
+     begin
+       monotone-fun.g (cont-fun.mon ((z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧)) ⊥
+     ≡⟨ {!z⊥∘s⊥-inj-n { monotone-fun.g (cont-fun.mon term-⟦ `suc V ⟧) ⊥ }!} ⟩
+       inj false
+     ≡⟨ refl ⟩
+       monotone-fun.g (cont-fun.mon term-⟦ `false ⟧) ⊥
+     ∎)
+   ⟩
+    term-⟦ `false ⟧
+  ∎
+
