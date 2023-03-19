@@ -187,41 +187,72 @@ mon (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2) {⟨ i , j ⟩} {⟨ i′ 
       (mon (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2) λ {fzero → mon (monotone c) i≤i′ fzero; (fsucc fzero) → mon (monotone c) j≤j′ (fsucc fzero)})
       refl
 
+helpful-chain : {D E F : domain}
+  → chain (pos (domain-product D E))
+  → (f : (A (pos (domain-product D E)) → A (pos F)))
+  → ({d d′ : A (pos D)} → {e : A (pos E)} → (R (pos D)) d d′ → (R (pos F)) (f (pair d e) ) (f (pair d′ e)))
+  → ({d : A (pos D)} → {e e′ : A (pos E)} → (R (pos E)) e e′ → (R (pos F)) (f (pair d e) ) (f (pair d e′)))
+  → chain (pos F)
+
+helpful-chain {D} {E} {F} c f mon-arg-1 mon-arg-2 = record
+  { monotone = record
+    { g = λ n → ⊔ (chain-complete F (chain-map (chain-fix-d-slide-33 c (g (monotone (proj₁-chain c)) n)) (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2)))
+    ; mon = λ {a} {a′} a≤a′ → {!!}
+    }
+  }
+
 mon (slide-33-prop-cont {D} {E} {F} f mon-arg-1 mon-arg-2 _ _) = slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2
 lub-preserve (slide-33-prop-cont {D} {E} {F} f mon-arg-1 mon-arg-2 cont-arg-1 cont-arg-2) c =
   let f-mon = slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2 in
-  let ⊔dₙ = ⊔ (chain-complete D (posets2.proj₁-chain c)) in
-  let ⊔eₙ = ⊔ (chain-complete E (posets2.proj₂-chain c)) in
+  let ⊔dₙ = ⊔ (chain-complete D (proj₁-chain c)) in
+  let ⊔eₙ = ⊔ (chain-complete E (proj₂-chain c)) in
   let ⊔[dₙeₙ] = ⊔ (chain-complete (domain-product D E) c) in
-  let ⊔ᵢf[dᵢ,⊔eⱼ] = ⊔ (chain-complete F ([dₙ,eₙ],f→f[dₙ,⊔eⱼ] {D} {E} {F} c f-mon)) in
-  let ⊔ᵢ⊔ⱼf[dᵢ,eⱼ] = ⊔ (chain-complete F ([dₙ,eₙ],f→⊔ⱼ[f[dₙ,eⱼ]] {D} {E} {F} c f-mon)) in
+  let f[dᵢ,⊔eⱼ] = [dₙ,eₙ],f→f[dₙ,⊔eⱼ] {D} {E} {F} c f-mon in
+  let ⊔ᵢf[dᵢ,⊔eⱼ] = ⊔ (chain-complete F f[dᵢ,⊔eⱼ]) in
+  let ⊔ⱼ[f[dₙ,eⱼ]] = [dₙ,eₙ],f→⊔ⱼ[f[dₙ,eⱼ]] {D} {E} {F} c f-mon in
+  let ⊔ᵢ⊔ⱼf[dᵢ,eⱼ] = ⊔ (chain-complete F ⊔ⱼ[f[dₙ,eⱼ]]) in
   begin
     f ⊔[dₙeₙ]
   ≡⟨ cong f (Eq.sym pair-η) ⟩
     f (pair (⊔dₙ) (⊔eₙ))
   ≡⟨ cont-arg-1 {c} {⊔eₙ} ⟩
     ⊔ (chain-complete F (chain-map (chain-fix-e-slide-33 c ⊔eₙ) f-mon))
-  ≡⟨ posets2.same-f-same-lub {F} {chain-map (chain-fix-e-slide-33 c ⊔eₙ) f-mon} {[dₙ,eₙ],f→f[dₙ,⊔eⱼ] {D} {E} {F} c f-mon}
-      (posets2.function-extensionality λ n →
-        cong f (posets2.dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}))
+  ≡⟨ same-f-same-lub {F} {chain-map (chain-fix-e-slide-33 c ⊔eₙ) f-mon} {[dₙ,eₙ],f→f[dₙ,⊔eⱼ] {D} {E} {F} c f-mon}
+      (function-extensionality λ n →
+        cong f (dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}))
    ⟩
     ⊔ᵢf[dᵢ,⊔eⱼ]
-  ≡⟨ posets2.same-f-same-lub
-       {F} {[dₙ,eₙ],f→f[dₙ,⊔eⱼ] c f-mon} {{!!}}
-       (posets2.function-extensionality λ n → cont-arg-2 {c} {g (monotone (proj₁-chain {D} {E} c)) n})
+  ≡⟨ same-f-same-lub
+       {F} {f[dᵢ,⊔eⱼ]} {helpful-chain {D} {E} {F} c f mon-arg-1 mon-arg-2}
+       (function-extensionality λ n → cont-arg-2 {c} {g (monotone (proj₁-chain {D} {E} c)) n})
    ⟩
-     {!!}                
-  ≡⟨ {!!} ⟩
+     ⊔ (chain-complete F (helpful-chain {D} {E} {F} c f mon-arg-1 mon-arg-2))                
+  ≡⟨ same-f-same-lub
+       {F} {helpful-chain {D} {E} {F} c f mon-arg-1 mon-arg-2} {⊔ⱼ[f[dₙ,eⱼ]]}
+       (function-extensionality λ i → 
+         same-f-same-lub
+           {F}
+           {chain-map (chain-fix-d-slide-33 c (g (monotone (proj₁-chain c)) i)) f-mon}
+           {[dₙ,eₙ],f,n→f[dₙ,eⱼ] {D} {E} {F} c f-mon i}
+           (function-extensionality λ j
+             → cong f (dependent-function-extensionality (λ {fzero → refl; (fsucc fzero) → refl}))
+           )
+       )
+   ⟩
     ⊔ᵢ⊔ⱼf[dᵢ,eⱼ]
   ≡⟨ same-f-same-lub
-       {F} {[dₙ,eₙ],f→⊔ⱼ[f[dₙ,eⱼ]] c f-mon} {posets2.chain-⊔fₙₖ-with-n-fixed F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)}
-       (posets2.function-extensionality λ x → {!!})
+       {F} {⊔ⱼ[f[dₙ,eⱼ]]} {chain-⊔fₙₖ-with-n-fixed F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)}
+       (function-extensionality (λ x →
+         same-f-same-lub
+           {F} {[dₙ,eₙ],f,n→f[dₙ,eⱼ] {D} {E} {F} c f-mon x} {chain-fₘₙ-with-m-fixed F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2) x}
+           refl)
+       )
    ⟩
-    ⊔ (chain-complete F (posets2.chain-⊔fₙₖ-with-n-fixed F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)))
-  ≡⟨ posets2.diagonalising-lemma-1 F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2) ⟩
-    ⊔ (chain-complete F (posets2.fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)))
+    ⊔ (chain-complete F (chain-⊔fₙₖ-with-n-fixed F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)))
+  ≡⟨ diagonalising-lemma-1 F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2) ⟩
+    ⊔ (chain-complete F (fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)))
   ≡⟨ same-f-same-lub
-       {F} {posets2.fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)} {chain-map c f-mon}
+       {F} {fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)} {chain-map c f-mon}
        (posets2.function-extensionality (λ x → cong f pair-η))
    ⟩
     ⊔ (chain-complete F (chain-map c f-mon))

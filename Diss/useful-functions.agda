@@ -101,17 +101,6 @@ domain-dependent-projection I f i = record { mon = domain-dependent-projection-m
                                                  refl
                                            }
 
--- if-mon {D} = record { g = (λ { ⟨ inj true , ⟨ d , _ ⟩ ⟩ → d
---                              ; ⟨ inj false , ⟨ _ , d′ ⟩ ⟩ → d′
---                              ; ⟨ ⊥₁ , ⟨ _ , _ ⟩ ⟩ → posets2.least-element.⊥ (domain.bottom D)
---                              })
---                     ; mon = λ { {⟨ ⊥₁ , b₁ ⟩} → λ a≤a′ → (posets2.least-element.⊥-is-bottom (domain.bottom D))
---                               ; {⟨ inj true , _ ⟩} {⟨ inj true , _ ⟩} → λ a≤a′ → proj₁ (proj₂ a≤a′)
---                               ; {⟨ inj false , _ ⟩} {⟨ inj false , _ ⟩} → λ a≤a′ → proj₂ (proj₂ a≤a′)
---                               }
---                     }
-
-
 pair : ∀ {D} {E} → (A (pos D)) → (A (pos E)) → A (pos (domain-product D E))
 pair d e fzero = d
 pair d e (fsucc fzero) = e
@@ -121,27 +110,4 @@ pair-equality refl refl = refl
 
 pair-η : ∀ {D} {E} → {a : poset.A (pos (domain-product D E))} → pair {D} {E} (a fzero) (a (fsucc fzero)) ≡ a
 pair-η = posets2.dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
-
-
-cur-cont : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → cont-fun D′ (function-domain D E)
-
-cur-mon : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → monotone-fun (pos D′) (pos (function-domain D E))
-
-g (mon (g (cur-mon {D} {D′} {E} f) d′)) d = g (mon f) (pair d′ d)
-mon (mon (g (cur-mon {D} {D′} {E} f) d′)) a≤a′ = mon (mon f) λ {fzero → reflexive (pos D′); (fsucc fzero) → a≤a′}
-lub-preserve (g (cur-mon {D} {D′} {E} f) d′) c =
-  begin
-    g (mon (g (cur-mon f) d′)) (⊔ (chain-complete D c))
-  ≡⟨ {!!} ⟩
-    {!!}
-  ≡⟨ {!!} ⟩
-    ⊔ (chain-complete E (chain-map c (mon (g (cur-mon f) d′))))
-  ∎
-
-mon (cur-mon {D} {D′} {E} f) a≤a′ = mon (mon f) λ {fzero → a≤a′; (fsucc fzero) → reflexive (pos D)}
-
-         
-cur-cont {D} {D′} {E} f = record { mon = cur-mon {D} {D′} {E} f
-                                 ; lub-preserve = λ c → {!!}
-                                 }
 
