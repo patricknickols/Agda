@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module posets2 where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
