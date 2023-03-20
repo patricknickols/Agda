@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module if-cont where
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -15,6 +16,7 @@ open monotone-fun
 open cont-fun
 open lub
 open chain
+open least-element
 
 
 poset-projections : (P₁ P₂ : poset) → (Fin 2) → poset
@@ -197,7 +199,12 @@ helpful-chain : {D E F : domain}
 helpful-chain {D} {E} {F} c f mon-arg-1 mon-arg-2 = record
   { monotone = record
     { g = λ n → ⊔ (chain-complete F (chain-map (chain-fix-d-slide-33 c (g (monotone (proj₁-chain c)) n)) (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2)))
-    ; mon = λ {a} {a′} a≤a′ → {!!}
+    ; mon = λ {a} {a′} a≤a′ →
+      same-f-same-lub-≤ F
+        (chain-map (chain-fix-d-slide-33 c (g (monotone c) a fzero)) (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2))
+        (chain-map (chain-fix-d-slide-33 c (g (monotone c) a′ fzero)) (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2))
+        λ n → mon (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2)
+                λ {fzero → mon (monotone c) a≤a′ fzero; (fsucc fzero) → reflexive (pos E)}
     }
   }
 
@@ -271,18 +278,22 @@ if-mon-first : {D : domain} → {b b′ : A (pos 𝔹⊥)} → {e : A (pos (doma
 if-mon-first {D} z≼n = posets2.least-element.⊥-is-bottom (bottom D)
 if-mon-first {D} x≼x = reflexive (pos D)
 
-if-mon-second : {D : domain} → ({b : posets2.B⊥ Bool} → {e e′ : A (pos (domain-product D D))} → (R (pos (domain-product D D))) e e′ → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
-if-mon-second {D} {⊥₁} a = posets2.least-element.⊥-is-bottom (domain.bottom D)
-if-mon-second {D} {inj false} e≤e′ = e≤e′ (fsucc fzero) 
-if-mon-second {D} {inj true} e≤e′ = e≤e′ fzero
+if-mon-second : (D : domain)
+  → ((b : posets2.B⊥ Bool)
+  → (e e′ : A (pos (domain-product D D)))
+  → (R (pos (domain-product D D))) e e′
+  → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
+if-mon-second D ⊥₁ e e′ e≤e′ = ⊥-is-bottom (bottom D)
+if-mon-second D (inj false) e e′ e≤e′ = e≤e′ (fsucc fzero) 
+if-mon-second D (inj true) e e′ e≤e′ = e≤e′ fzero
 
 if-cont-first : ∀ {D}
   → {c : chain (pos (domain-product 𝔹⊥ (domain-product D D)))}
   → {e : A (pos (domain-product D D))}
-  → if-g (pair (⊔ (chain-complete 𝔹⊥ (posets2.proj₁-chain c))) e)
+  → if-g (pair (⊔ (chain-complete 𝔹⊥ (proj₁-chain c))) e)
     ≡
-    ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (if-mon-second {D}))))
-
+    ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D})
+        (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂))))
 if-cont-first {D} {c} {e} = {!!}
 
 
@@ -291,44 +302,60 @@ if-cont-second : ∀ {D}
   → {d : A (pos 𝔹⊥)}
   → if-g (pair d (⊔ (chain-complete (domain-product D D) (proj₂-chain c))))
     ≡
-    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c d) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (if-mon-second {D}))))
+    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c d) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (λ {d′} {e₁} {e₂} → if-mon-second D d′ e₁ e₂))))
 
 if-cont-second {D} {c} {⊥₁} =
+  let if-mon = slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂) in
   begin
     if-g (pair ⊥₁ (⊔ (chain-complete (domain-product D D) (proj₂-chain c))))
   ≡⟨ refl ⟩
     posets2.least-element.⊥ (bottom D)
   ≡⟨ antisymmetric (pos D)
        (least-element.⊥-is-bottom (bottom D))
-       (lub2 (chain-complete D (chain-map (chain-fix-d-slide-33 c ⊥₁) (slide-33-prop if-g if-mon-first if-mon-second))) λ {n} → reflexive (pos D))
+       (lub2 (chain-complete D (chain-map (chain-fix-d-slide-33 c ⊥₁) if-mon)) λ {n} → reflexive (pos D))
    ⟩
-    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c ⊥₁) (slide-33-prop if-g if-mon-first if-mon-second)))
+    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c ⊥₁) if-mon))
   ∎
 if-cont-second {D} {c} {inj true} =
+  let if-mon = slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂) in
   begin
     if-g (pair (inj true) (⊔ (chain-complete (domain-product D D) (proj₂-chain c))))
   ≡⟨ refl ⟩
     ⊔ (chain-complete D (proj₁-chain (proj₂-chain c)))
-  ≡⟨ same-f-same-lub
-       {D} {proj₁-chain (proj₂-chain c)} {chain-map (chain-fix-d-slide-33 c (inj true)) (slide-33-prop if-g if-mon-first if-mon-second)}
+  ≡⟨ same-f-same-lub {D}
+       {proj₁-chain (proj₂-chain c)}
+       {chain-map (chain-fix-d-slide-33 c (inj true)) if-mon}
        refl
    ⟩
-    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c (inj true)) (slide-33-prop if-g if-mon-first if-mon-second)))
+    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c (inj true)) if-mon))
   ∎
 if-cont-second {D} {c} {inj false} =
+  let if-mon = slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂) in
   begin
     if-g (pair (inj false) (⊔ (chain-complete (domain-product D D) (proj₂-chain c))))
   ≡⟨ refl ⟩
     ⊔ (chain-complete D (proj₂-chain (proj₂-chain c)))
-  ≡⟨ same-f-same-lub
-       {D} {proj₂-chain (proj₂-chain c)} {chain-map (chain-fix-d-slide-33 c (inj false)) (slide-33-prop if-g if-mon-first if-mon-second)}
+  ≡⟨ same-f-same-lub {D}
+       {proj₂-chain (proj₂-chain c)}
+       {chain-map (chain-fix-d-slide-33 c (inj false)) if-mon}
        refl
    ⟩
-    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c (inj false)) (slide-33-prop if-g if-mon-first if-mon-second)))
+    ⊔ (chain-complete D (chain-map (chain-fix-d-slide-33 c (inj false)) if-mon))
   ∎
 
 if-cont : ∀ {D} → cont-fun (domain-product 𝔹⊥ (domain-product D D)) D
-if-mon : ∀ {D} → monotone-fun (posets2.product-pos 𝔹⊥ (domain-product D D)) (pos D)
-if-mon {D} = slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (if-mon-second {D})
+if-mon : ∀ {D} → monotone-fun (product-pos 𝔹⊥ (domain-product D D)) (pos D)
+if-mon {D} =
+  slide-33-prop
+    {𝔹⊥} {domain-product D D} {D}
+    if-g
+    (if-mon-first {D})
+    (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂)
 
-if-cont {D} = slide-33-prop-cont {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) if-mon-second if-cont-first if-cont-second
+if-cont {D} =
+  slide-33-prop-cont
+    {𝔹⊥} {domain-product D D} {D}
+    if-g
+    (if-mon-first {D}) (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂)
+    if-cont-first
+    (if-cont-second {D})
