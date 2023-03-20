@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module cur-cont where
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -5,6 +6,8 @@ open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
 open import posets2
 open import useful-functions using (pair)
+open import Data.Nat using (ℕ; zero; suc)
+open import Data.Product renaming (_,_ to ⟨_,_⟩)
 
 open poset
 open domain
@@ -18,10 +21,10 @@ cur-cont : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → cont-fun D�
 cur-mon : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → monotone-fun (pos D′) (pos (function-domain D E))
 
 helpful-chain-1 : ∀ {D D′ E} → cont-fun (domain-product D′ D) E → chain (pos D) → A (pos D′) → chain (pos (domain-product D′ D))
-helpful-chain-1 f c d′ = record
+helpful-chain-1 {_} {D′} f c d′ = record
   { monotone = record
     { g = λ x i → pair d′ ((g (monotone c) x)) i
-    ; mon = {!!}
+    ; mon = λ a≤a′ → (λ {fzero → reflexive (pos D′); (fsucc fzero) → mon (monotone c) a≤a′})
     }
   }
 
@@ -42,9 +45,23 @@ lub-preserve (g (cur-mon {D} {D′} {E} f) d′) c =
     g (mon (g (cur-mon f) d′)) (⊔ (chain-complete D c))
   ≡⟨ refl ⟩
     g (mon f) (pair d′ (⊔ (chain-complete D c)))
-  ≡⟨ cong (g (mon f)) (dependent-function-extensionality ((λ { fzero → {!!} ; (fsucc fzero) → refl }))) ⟩
-    g (mon f) (⊔ (chain-complete (domain-product D′ D) (helpful-chain-1 f c d′))) 
+  ≡⟨ cong (g (mon f)) (dependent-function-extensionality ((λ { fzero →
+          antisymmetric (pos D′)
+            (lub1 (chain-complete (domain-product D′ D) (helpful-chain-1 f c d′)) {zero} fzero)
+            (lub2 (chain-complete (domain-product D′ D) (helpful-chain-1 f c d′)) {pair d′ (⊔ (chain-complete D c))}
+              (λ {n}
+                → λ {fzero → reflexive (pos D′); (fsucc fzero) → lub1 (chain-complete D c)}
+              ) fzero)
+          ; (fsucc fzero) → refl
+          })))
+   ⟩
+    g (mon f) (⊔ (chain-complete (domain-product D′ D) (helpful-chain-1 f c d′)))
   ≡⟨ lub-preserve f (helpful-chain-1 f c d′) ⟩
+    ⊔ (chain-complete E (chain-map (helpful-chain-1 f c d′) (mon f)))
+  ≡⟨ same-f-same-lub
+       {E} {chain-map (helpful-chain-1 f c d′) (mon f)} {chain-map c (mon (g (cur-mon f) d′))}
+       refl
+   ⟩
     ⊔ (chain-complete E (chain-map c (mon (g (cur-mon f) d′))))
   ∎
 
@@ -52,21 +69,26 @@ mon (cur-mon {D} {D′} {E} f) a≤a′ = mon (mon f) λ {fzero → a≤a′; (f
 
          
 mon (cur-cont {D} {D′} {E} f) = cur-mon {D} {D′} {E} f
-lub-preserve (cur-cont {D} {D′} {E} f) c = cont-fun-extensionality λ x →
+lub-preserve (cur-cont {D} {D′} {E} f) c = cont-fun-extensionality λ d →
   begin
-    g (mon (g (mon (cur-cont f)) (⊔ (chain-complete D′ c)))) x
+    g (mon (g (mon (cur-cont f)) (⊔ (chain-complete D′ c)))) d
   ≡⟨ refl ⟩
-    g (mon f) (pair (⊔ (chain-complete D′ c)) x)
-  ≡⟨ cong (g (mon f)) (dependent-function-extensionality (λ { fzero → refl ; (fsucc fzero) → {!!} })) ⟩
-    g (mon f) (⊔ (chain-complete (domain-product D′ D) (helpful-chain-2 f c x)))
-  ≡⟨ lub-preserve f (helpful-chain-2 f c x) ⟩
-    ⊔ (chain-complete E (chain-map (helpful-chain-2 f c x) (mon f)))
+    g (mon f) (pair (⊔ (chain-complete D′ c)) d)
+  ≡⟨ cong (g (mon f)) (dependent-function-extensionality (λ { fzero → refl ; (fsucc fzero) →
+    antisymmetric (pos D)
+      (lub1 (chain-complete (domain-product D′ D) (helpful-chain-2 f c d)) {zero} (fsucc fzero))
+      (lub2 (chain-complete (domain-product D′ D) (helpful-chain-2 f c d)) {pair (⊔ (chain-complete D′ c)) d}
+        ((λ { fzero → lub1 (chain-complete D′ c) ; (fsucc fzero) → reflexive (pos D) })) (fsucc fzero)) }))
+   ⟩
+    g (mon f) (⊔ (chain-complete (domain-product D′ D) (helpful-chain-2 f c d)))
+  ≡⟨ lub-preserve f (helpful-chain-2 f c d) ⟩
+    ⊔ (chain-complete E (chain-map (helpful-chain-2 f c d) (mon f)))
   ≡⟨ same-f-same-lub
-       {E} {chain-map (helpful-chain-2 f c x) (mon f)} {chain-of-fₙ[d] D E (chain-map c (cur-mon f)) x}
+       {E} {chain-map (helpful-chain-2 f c d) (mon f)} {chain-of-fₙ[d] D E (chain-map c (cur-mon f)) d}
        refl
    ⟩
-    ⊔-chain-of-fₙ[d] D E (chain-map c (cur-mon f)) x
+    ⊔-chain-of-fₙ[d] D E (chain-map c (cur-mon f)) d
   ≡⟨ refl ⟩
-    g (mon (⊔ (chain-complete (function-domain D E)(chain-map c (mon (cur-cont f)))))) x
+    g (mon (⊔ (chain-complete (function-domain D E)(chain-map c (mon (cur-cont f)))))) d
   ∎
                                  
