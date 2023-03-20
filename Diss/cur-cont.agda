@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module cur-cont where
 
 import Relation.Binary.PropositionalEquality as Eq
