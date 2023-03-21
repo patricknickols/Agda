@@ -1,10 +1,11 @@
 module posets2 where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
-open Eq using (_≡_)
+open Eq using (_≡_; cong)
 
 open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; s≤s; z≤n)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
+open import Data.Sum.Base using (_⊎_; inj₁; inj₂) 
 
 data Fin : ℕ → Set where
   fzero : {n : ℕ} → Fin (suc n)
@@ -18,7 +19,7 @@ refl-≤ {zero} = z≤n
 refl-≤ {suc n} = s≤s (refl-≤ {n})
 
 antisym-≤ z≤n z≤n = Eq.refl
-antisym-≤ (s≤s n≤m) (s≤s m≤n) = Eq.cong suc (antisym-≤ n≤m m≤n)
+antisym-≤ (s≤s n≤m) (s≤s m≤n) = cong suc (antisym-≤ n≤m m≤n)
 
 trans-≤ z≤n z≤n = z≤n
 trans-≤ z≤n (s≤s n≤p) = z≤n
@@ -82,8 +83,9 @@ open lub
 chain-map : {P≤ : poset} {Q≤ : poset} (c : chain P≤) → (monotone-fun P≤ Q≤) → (chain Q≤) 
 
 chain-map c f = record { monotone = 
-                                    record { g = λ n → let dₙ = (g (monotone c) n) in
-                                             g f dₙ
+                                    record { g = λ n →
+                                               let dₙ = (g (monotone c) n) in
+                                               g f dₙ
                                            ; mon = λ a≤a′ → mon f (mon (monotone c) a≤a′)
                                            }
                        }
@@ -110,18 +112,6 @@ product-equality : {S₁ S₂ : Set} {a a′ : S₁} {b b′ : S₂} → a ≡ a
 product-equality {a} {a′} {b} {b′} Eq.refl Eq.refl = Eq.refl
 
 domain-product : domain → domain → domain
-
--- product-R : {D₁ D₂ : domain} → (pair₁ pair₂ : (A (pos D₁)) × (A (pos D₂))) → Set
--- product-R {D₁} {D₂} (d₁ , d₂) (d₁′ , d₂′) = ((R (pos D₁)) d₁ d₁′) × ((R (pos D₂)) d₂ d₂′)
-
--- product-R-refl : {D₁ D₂ : domain} → {pair₁ : (A (pos D₁)) × (A (pos D₂))} → product-R {D₁} {D₂} pair₁ pair₁
--- product-R-refl {D₁} {D₂} = reflexive (pos D₁) , reflexive (pos D₂)
-
--- product-R-antisym : {D₁ D₂ : domain} → {pair₁ pair₂ : (A (pos D₁)) × (A (pos D₂))} → product-R {D₁} {D₂} pair₁ pair₂ → product-R {D₁} {D₂} pair₂ pair₁ → pair₁ ≡ pair₂
--- product-R-antisym {D₁} {D₂} {d₁ , d₂ } {d₁′ , d₂′ } (d₁≤d₁′ , d₂≤d₂′) (d₁′≤d₁ , d₂′≤d₂) = product-equality  (antisymmetric (pos D₁) d₁≤d₁′ d₁′≤d₁) ((antisymmetric (pos D₂)) d₂≤d₂′ d₂′≤d₂)
-
--- product-R-trans : {D₁ D₂ : domain} → {pair₁ pair₂ pair₃ : (A (pos D₁)) × (A (pos D₂))} → product-R {D₁} {D₂} pair₁ pair₂ → product-R {D₁} {D₂} pair₂ pair₃ → product-R {D₁} {D₂} pair₁ pair₃
--- product-R-trans {D₁} {D₂} (d₁≤d₁′ , d₂≤d₂′) (d₁′≤d₁″ , d₂′≤d₂″) = transitive (pos D₁) d₁≤d₁′ d₁′≤d₁″ , transitive (pos D₂) d₂≤d₂′ d₂′≤d₂″
 
 
 domain-projections : (D₁ D₂ : domain) → (Fin 2) → domain
@@ -154,7 +144,6 @@ postulate
   dependent-function-extensionality : {I : Set} {D : I → Set} {p p′ : (i : I) → (D i) }
     → (∀ (i : I) → p i ≡ p′ i)
     → p ≡ p′
-
 
 
 domain-dependent-antisym : (I : Set) → (f : I → domain) → {p₁ p₂ : (i : I) → (A (pos (f i)))} → domain-dependent-R I f p₁ p₂ → domain-dependent-R I f p₂ p₁ → p₁ ≡ p₂
@@ -243,12 +232,58 @@ flat-domain-pos B = record
                       ; transitive = trans-≼
                       } 
 
---flat-domain-chain-eventually-constant : ∀ {B} → (c : chain (flat-domain-pos B)) → eventually-constant c
-postulate chain-complete-flat-domain-pos-B : ∀ {B} → (c : chain (flat-domain-pos B)) → lub c
+record eventually-constant {B : Set} (c : chain (flat-domain-pos B)) : Set where
+  field
+    index : ℕ
+    eventual-val : B⊥ B
+    eventually-val : {m : ℕ} → index ≤ m → g (monotone c) m ≡ eventual-val
+    constant-UP : {eventual-val′ : B⊥ B} {index′ : ℕ}
+                  → ({m : ℕ} → index′ ≤ m → g (monotone c) m ≡ eventual-val′)
+                  → eventual-val′ ≡ eventual-val  
+open eventually-constant
 
+--postulate chain-complete-flat-domain-pos-B : ∀ {B} → (c : chain (flat-domain-pos B)) → lub c
+postulate flat-domain-chain-eventually-constant : ∀ {B} → (c : chain (flat-domain-pos B)) → eventually-constant c
+
+a≤b≡c→a≤c : {a b c : ℕ} → a ≤ b → b ≡ c → a ≤ c
+a≤b≡c→a≤c a≤b Eq.refl = a≤b
+
+a≤b≡c→a≤c′ : {D : Set} {_⊑_ : D → D → Set} {a b c : D} → a ⊑ b → b ≡ c → a ⊑ c
+a≤b≡c→a≤c′ a≤b Eq.refl = a≤b
+
+a≡b≤c→a≤c : {D : Set} {_⊑_ : D → D → Set} {a b c : D} → a ≡ b → b ⊑ c → a ⊑ c
+a≡b≤c→a≤c Eq.refl b≤c = b≤c
+
+≤-dichotomy : {m n : ℕ} → (m ≤ n) ⊎ (n ≤ m)
+≤-dichotomy {zero} {n} = inj₁ z≤n
+≤-dichotomy {suc m} {zero} = inj₂ z≤n
+≤-dichotomy {suc m} {suc n} with ≤-dichotomy {m} {n}
+...                         | inj₁ m≤n  = inj₁ (s≤s m≤n)
+...                         | inj₂ n≤m = inj₂ (s≤s n≤m)
+
+a≡b→a≤b : {P : poset} → {a b : A P} → a ≡ b → (R P) a b
+a≡b→a≤b {P} Eq.refl = reflexive P
+
+chain-complete-flat-domain : {A : Set} → (c : chain (flat-domain-pos A)) → lub c
+⊔ (chain-complete-flat-domain c) = eventual-val (flat-domain-chain-eventually-constant c)
+lub1 (chain-complete-flat-domain {A} c) {n} with ≤-dichotomy {n} {index (flat-domain-chain-eventually-constant c)}
+...                                     | inj₁ n≤index = a≤b≡c→a≤c′
+                                                           {B⊥ A} {R (flat-domain-pos A)}
+                                                           (mon (monotone c) n≤index)
+                                                           (eventually-val (flat-domain-chain-eventually-constant c) (refl-≤))
+...                                     | inj₂ index≤n = a≡b→a≤b
+                                                           {flat-domain-pos A}
+                                                           (eventually-val (flat-domain-chain-eventually-constant c) index≤n)
+lub2 (chain-complete-flat-domain {A} c) {d′} x = a≡b≤c→a≤c
+                                                   {B⊥ A}
+                                                   {R (flat-domain-pos A)}
+                                                   {eventual-val (flat-domain-chain-eventually-constant c)}
+                                                   {g (monotone c) (index (flat-domain-chain-eventually-constant c))} {d′}
+                                                   (Eq.sym (eventually-val (flat-domain-chain-eventually-constant c) refl-≤))
+                                                   x
 
 flat-domain A = record { pos = flat-domain-pos A
-                       ; chain-complete = chain-complete-flat-domain-pos-B
+                       ; chain-complete = chain-complete-flat-domain {A}
                        ; bottom = record
                          { ⊥ = ⊥₁
                          ; ⊥-is-bottom = z≼n
@@ -328,9 +363,6 @@ lubs-shift-invariant-2 :
   let _⊑_ = (R (pos P)) in
     ⊔ (⋃ c′) ⊑ ⊔ (⋃ c)
 
-a≡b≤c→a≤c : ∀ {D : Set} {_⊑_ : D → D → Set} {a b c : D} → a ≡ b → b ⊑ c → a ⊑ c
-
-a≡b≤c→a≤c Eq.refl b≤c = b≤c
 
 lubs-shift-invariant-1 P c c′ k x =
   let ⋃ = (chain-complete P) in
@@ -533,9 +565,6 @@ a≤max-a-b : {b : ℕ} (a : ℕ) → a ≤ (max a b)
 a≤max-a-b zero = _≤_.z≤n
 a≤max-a-b {zero} (suc a) = refl-≤
 a≤max-a-b {suc b} (suc a) = _≤_.s≤s (a≤max-a-b {b} a)
-
-a≤b≡c→a≤c : {a b c : ℕ} → a ≤ b → b ≡ c → a ≤ c
-a≤b≡c→a≤c a≤b Eq.refl = a≤b
 
 
 dₘₙ≤⊔dₖₖ : {m n : ℕ} (P : domain) → (double-index-fun : monotone-fun nats²-pos (pos P)) → R (pos P) (g (double-index-fun) (m , n)) (⊔ (chain-complete P (fₖₖ-chain P double-index-fun)))
