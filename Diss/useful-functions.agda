@@ -1,5 +1,3 @@
-
-{-# OPTIONS --allow-unsolved-metas #-}
 module useful-functions where
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -7,7 +5,7 @@ open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
 open import Data.Nat using (ℕ)
 open import Data.Bool using (Bool; true; false)
-open import posets2 using (poset; lub; domain; monotone-fun; cont-fun; flat-domain; flat-domain-pos; inj; x≼x; chain-map; chain-complete-flat-domain-pos-B; domain-product; product-equality; ⊥₁; z≼n; function-domain; chain; product-pos; domain-dependent-product; fsucc; fzero; proj₁-chain; proj₂-chain; same-f-same-lub)
+open import posets2
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
 
 open poset
@@ -16,7 +14,7 @@ open monotone-fun
 open cont-fun
 open lub
 open chain
-
+open eventually-constant
 
 constant-fun-is-cont : {B : Set} → {D : domain} → B → cont-fun D (flat-domain B)
 constant-fun-is-cont-mon : {B : Set} → {D : domain} → B → monotone-fun (pos D) (pos (flat-domain B))
@@ -28,13 +26,13 @@ constant-fun-is-cont {B} {D} b = record { mon = constant-fun-is-cont-mon {B} {D}
                                             (lub1
                                               {pos (flat-domain B)}
                                               {chain-map c (constant-fun-is-cont-mon {B} {D} b)}
-                                              (chain-complete-flat-domain-pos-B (chain-map c (constant-fun-is-cont-mon {B} {D} b)))
+                                              (chain-complete (flat-domain B) (chain-map c (constant-fun-is-cont-mon {B} {D} b)))
                                               {0}
                                             )
                                             (lub2
                                               {pos (flat-domain B)}
                                               {chain-map c (constant-fun-is-cont-mon {B} {D} b)}
-                                              (chain-complete-flat-domain-pos-B (chain-map c (constant-fun-is-cont-mon {B} {D} b)))
+                                              (chain-complete (flat-domain B) (chain-map c (constant-fun-is-cont-mon {B} {D} b)))
                                               {inj b}
                                               (λ {n} → x≼x)
                                             )
@@ -43,9 +41,9 @@ constant-fun-is-cont {B} {D} b = record { mon = constant-fun-is-cont-mon {B} {D}
 pair-f : ∀ {D D₁ D₂ : domain} → cont-fun D D₁ → cont-fun D D₂ → cont-fun D (domain-product D₁ D₂)
 g (mon (pair-f f₁ f₂)) x fzero = g (mon f₁) x
 g (mon (pair-f f₁ f₂)) x (fsucc i) = g (mon f₂) x
-mon (mon (pair-f f₁ f₂)) a≦a′ posets2.fzero = mon (mon f₁) a≦a′
-mon (mon (pair-f f₁ f₂)) a≦a′ (posets2.fsucc y) = mon (mon f₂) a≦a′
-lub-preserve (pair-f f₁ f₂) c = posets2.dependent-function-extensionality (λ { fzero → (lub-preserve f₁) c ; (fsucc x) → (lub-preserve f₂) c })
+mon (mon (pair-f f₁ f₂)) a≦a′ fzero = mon (mon f₁) a≦a′
+mon (mon (pair-f f₁ f₂)) a≦a′ (fsucc y) = mon (mon f₂) a≦a′
+lub-preserve (pair-f f₁ f₂) c = dependent-function-extensionality (λ { fzero → (lub-preserve f₁) c ; (fsucc x) → (lub-preserve f₂) c })
 
 
 _∘_ : ∀ {D₁ D₂ D₃} → cont-fun D₂ D₃ → cont-fun D₁ D₂ → cont-fun D₁ D₃
@@ -68,8 +66,8 @@ _∘_ {D₁ = D₁} {D₂ = D₂} {D₃ = D₃} f₂ f₁  =
                             ∎ 
                             }
 
-extend-function : ∀ {X Y} → (X → posets2.B⊥ Y) → cont-fun (flat-domain X) (flat-domain Y)
-extend-function-mon : ∀ {X Y} → (X → posets2.B⊥ Y) → monotone-fun (flat-domain-pos X) (flat-domain-pos Y)
+extend-function : ∀ {X Y} → (X → B⊥ Y) → cont-fun (flat-domain X) (flat-domain Y)
+extend-function-mon : ∀ {X Y} → (X → B⊥ Y) → monotone-fun (flat-domain-pos X) (flat-domain-pos Y)
 extend-function-mon f = record { g = λ { ⊥₁ → ⊥₁
                                        ; (inj x) → f x
                                        }
@@ -77,12 +75,16 @@ extend-function-mon f = record { g = λ { ⊥₁ → ⊥₁
                                }
 
 mon (extend-function {X} {Y} f) = extend-function-mon f
-lub-preserve (extend-function {X} {Y} f) c = antisymmetric (flat-domain-pos Y)
-  {!!}
-  (lub2 (chain-complete-flat-domain-pos-B (chain-map c (extend-function-mon f)))
-    (λ {n} → mon (extend-function-mon f) (lub1 (chain-complete (flat-domain X) c))))
 
-
+lub-preserve (extend-function {X} {Y} f) c = constant-UP
+  (flat-domain-chain-eventually-constant (chain-map c (extend-function-mon f)))
+  {g (mon (extend-function f)) (⊔ (chain-complete (flat-domain X) c))}
+  {index (flat-domain-chain-eventually-constant c)}
+  (λ {m} index≤m →
+    cong
+      (g (mon (extend-function f)))
+      (eventually-val (flat-domain-chain-eventually-constant c) index≤m))
+           
 ℕ⊥ : domain
 𝔹⊥ : domain
 
@@ -96,8 +98,8 @@ domain-dependent-projection-mon I f i = record { g = λ p → p i ; mon = λ a�
 
 domain-dependent-projection I f i = record { mon = domain-dependent-projection-mon I f i
                                            ; lub-preserve = λ c →
-                                               posets2.same-f-same-lub
-                                                 {f i} {posets2.chain-of-functions I f c i} {chain-map c (domain-dependent-projection-mon I f i)}
+                                               same-f-same-lub
+                                                 {f i} {chain-of-functions I f c i} {chain-map c (domain-dependent-projection-mon I f i)}
                                                  refl
                                            }
 
@@ -109,5 +111,5 @@ pair-equality : ∀ {D} {E} → {d₁ d₂ : A (pos D)} → {e₁ e₂ : A (pos 
 pair-equality refl refl = refl
 
 pair-η : ∀ {D} {E} → {a : poset.A (pos (domain-product D E))} → pair {D} {E} (a fzero) (a (fsucc fzero)) ≡ a
-pair-η = posets2.dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
+pair-η = dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
 
