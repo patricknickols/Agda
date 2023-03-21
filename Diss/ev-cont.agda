@@ -36,7 +36,7 @@ fₙ,dₙ→fₙ[⊔dₙ] {D} {E} c = record
 fₙ,dₙ→fᵢdⱼ-chain : ∀ {D} {E} → (c : chain (pos (domain-product (function-domain D E) D))) → ℕ → chain (pos E) 
 fₙ,dₙ→fᵢdⱼ-chain {D} {E} c i = record
   { monotone = record
-    { g = λ j → g (mon (g (monotone (posets2.proj₁-chain c)) i)) (g (monotone (posets2.proj₂-chain c)) j)
+    { g = λ j → g (mon (g (monotone (proj₁-chain c)) i)) (g (monotone (proj₂-chain c)) j)
     ; mon = λ a≤a′ → mon (mon (g (monotone c) i fzero)) (mon (monotone c) a≤a′ (fsucc fzero))
     }
   }
@@ -53,7 +53,7 @@ fₙ,dₙ→⊔ⱼfᵢdⱼ {D} {E} c = record
     }
   }
 
-fᵢdⱼ : {D E : domain} → chain (pos (domain-product (function-domain D E) D)) → monotone-fun posets2.nats²-pos (pos E)
+fᵢdⱼ : {D E : domain} → chain (pos (domain-product (function-domain D E) D)) → monotone-fun nats²-pos (pos E)
 g (fᵢdⱼ c) ⟨ i , j ⟩ = let fᵢ = g (mon (g (monotone (proj₁-chain c)) i)) in
                        let dⱼ = g (monotone (proj₂-chain c)) j in
                        fᵢ dⱼ
@@ -67,45 +67,45 @@ mon (fᵢdⱼ {D} {E} c) {a} {a′} ⟨ i≤i′ , j≤j′ ⟩ =
 
 mon (ev-cont {D} {E}) = ev-mon {D} {E}
 lub-preserve (ev-cont {D} {E}) c =
-   let ev = monotone-fun.g (ev-mon {D} {E}) in
+   let ev = g (ev-mon {D} {E}) in
    let D→E = function-domain D E in
    let fₙ-chain = proj₁-chain {D→E} {D} c in
    let dₙ-chain = proj₂-chain {D→E} {D} c in
-   let ⊔fₙ = posets2.function-domain-⊔ D E fₙ-chain in
-   let ⊔dₙ = posets2.lub.⊔ (domain.chain-complete D dₙ-chain) in
-   let ev[⊔fₙ,⊔dₙ] = ev (posets2.lub.⊔ (domain.chain-complete (domain-product (D→E) D) c)) in
-   let [⊔fₙ][⊔dₙ] = monotone-fun.g (cont-fun.mon ⊔fₙ) ⊔dₙ in
-   let ⊔[fₙ[⊔dₙ]] = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→fₙ[⊔dₙ] c)) in
-   let ⊔ᵢ⊔ⱼfᵢdⱼ = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→⊔ⱼfᵢdⱼ c)) in
-   let ⊔fₙdₙ = posets2.lub.⊔ (domain.chain-complete E (fₙ,dₙ→fₙ[dₙ] c)) in
-   let ⊔ev[fₙ,dₙ] = posets2.lub.⊔ (domain.chain-complete E (chain-map c ev-mon)) in
+   let ⊔fₙ = function-domain-⊔ D E fₙ-chain in
+   let ⊔dₙ = ⊔ (chain-complete D dₙ-chain) in
+   let ev[⊔fₙ,⊔dₙ] = ev (⊔ (chain-complete (domain-product (D→E) D) c)) in
+   let [⊔fₙ][⊔dₙ] = g (mon ⊔fₙ) ⊔dₙ in
+   let ⊔[fₙ[⊔dₙ]] = ⊔ (chain-complete E (fₙ,dₙ→fₙ[⊔dₙ] c)) in
+   let ⊔ᵢ⊔ⱼfᵢdⱼ = ⊔ (chain-complete E (fₙ,dₙ→⊔ⱼfᵢdⱼ c)) in
+   let ⊔fₙdₙ = ⊔ (chain-complete E (fₙ,dₙ→fₙ[dₙ] c)) in
+   let ⊔ev[fₙ,dₙ] = ⊔ (chain-complete E (chain-map c ev-mon)) in
   begin
     ev[⊔fₙ,⊔dₙ]
   ≡⟨ refl ⟩
     [⊔fₙ][⊔dₙ]
   ≡⟨ same-f-same-lub
-       {E} {posets2.chain-of-fₙ[d] D E fₙ-chain ⊔dₙ} {fₙ,dₙ→fₙ[⊔dₙ] c}
+       {E} {chain-of-fₙ[d] D E fₙ-chain ⊔dₙ} {fₙ,dₙ→fₙ[⊔dₙ] c}
        refl
    ⟩
     ⊔[fₙ[⊔dₙ]]
   ≡⟨ same-f-same-lub
        {E} {fₙ,dₙ→fₙ[⊔dₙ] c} {fₙ,dₙ→⊔ⱼfᵢdⱼ c}
-       (posets2.function-extensionality λ n → lub-preserve (g (monotone fₙ-chain) n) dₙ-chain)
+       (function-extensionality λ n → lub-preserve (g (monotone fₙ-chain) n) dₙ-chain)
    ⟩
     ⊔ᵢ⊔ⱼfᵢdⱼ
   ≡⟨ same-f-same-lub
-        {E} {fₙ,dₙ→⊔ⱼfᵢdⱼ c} {posets2.chain-⊔fₙₖ-with-n-fixed E (fᵢdⱼ c)}
-        (posets2.function-extensionality (λ x →
+        {E} {fₙ,dₙ→⊔ⱼfᵢdⱼ c} {chain-⊔fₙₖ-with-n-fixed E (fᵢdⱼ c)}
+        (function-extensionality (λ x →
            same-f-same-lub
-             {E} {fₙ,dₙ→fᵢdⱼ-chain c x} {posets2.chain-fₘₙ-with-m-fixed E (fᵢdⱼ c) x}
+             {E} {fₙ,dₙ→fᵢdⱼ-chain c x} {chain-fₘₙ-with-m-fixed E (fᵢdⱼ c) x}
              refl))
    ⟩
-    ⊔ ((chain-complete E) (posets2.chain-⊔fₙₖ-with-n-fixed E (fᵢdⱼ c)))
-  ≡⟨ posets2.diagonalising-lemma-1 E (fᵢdⱼ c) ⟩
-    ⊔ ((chain-complete E) (posets2.fₖₖ-chain E (fᵢdⱼ c)))
+    ⊔ ((chain-complete E) (chain-⊔fₙₖ-with-n-fixed E (fᵢdⱼ c)))
+  ≡⟨ diagonalising-lemma-1 E (fᵢdⱼ c) ⟩
+    ⊔ ((chain-complete E) (fₖₖ-chain E (fᵢdⱼ c)))
   ≡⟨ same-f-same-lub
-       {E} {posets2.fₖₖ-chain E (fᵢdⱼ c)} {fₙ,dₙ→fₙ[dₙ] c}
-       (posets2.function-extensionality (λ x → refl) )
+       {E} {fₖₖ-chain E (fᵢdⱼ c)} {fₙ,dₙ→fₙ[dₙ] c}
+       (function-extensionality (λ x → refl) )
    ⟩
     ⊔fₙdₙ
   ≡⟨ refl ⟩

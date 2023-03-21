@@ -57,16 +57,16 @@ pair-pos d e fzero = d
 pair-pos d e (fsucc fzero) = e
 
 pair-η-pos : ∀ {D} {E} → {a : A (poset-product D E)} → pair-pos {D} {E} (a fzero) (a (fsucc fzero)) ≡ a
-pair-η-pos = posets2.dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
+pair-η-pos = dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
 
 a≤b≡c→a≤c₂ : {D : Set} {_⊑_ : D → D → Set} {a b c : D} → a ⊑ b → b ≡ c → a ⊑ c
 a≤b≡c→a≤c₂ a≤b Eq.refl = a≤b
 
 slide-33-prop : ∀ {D E F}
-  → (f : poset.A (domain.pos (domain-product D E)) → poset.A (domain.pos F))
-  → ({d d′ : poset.A (domain.pos D)} → {e : poset.A (domain.pos E)} → (poset.R (domain.pos D)) d d′ → (poset.R (domain.pos F)) (f (pair d e)) (f (pair d′ e)))
-  → ({d : poset.A (domain.pos D)} → {e e′ : poset.A (domain.pos E)} → (poset.R (domain.pos E)) e e′ → (poset.R (domain.pos F)) (f (pair d e)) (f (pair d e′)))
-  → monotone-fun (domain.pos (domain-product D E)) (domain.pos F)
+  → (f : A (pos (domain-product D E)) → A (pos F))
+  → ({d d′ : A (pos D)} → {e : A (pos E)} → (R (pos D)) d d′ → (R (pos F)) (f (pair d e)) (f (pair d′ e)))
+  → ({d : A (pos D)} → {e e′ : A (pos E)} → (R (pos E)) e e′ → (R (pos F)) (f (pair d e)) (f (pair d e′)))
+  → monotone-fun (pos (domain-product D E)) (pos F)
 
 g (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2) = f
 mon (slide-33-prop {D} {E} {F} f mon-arg-1 mon-arg-2) a≤a′ =
@@ -138,7 +138,7 @@ slide-33-prop-cont : ∀ {D E F}
 [dₙ,eₙ],f→f[dₙ,⊔eⱼ] : {D E F : domain} → (c : chain (pos (domain-product D E))) → (f : monotone-fun (pos (domain-product D E)) (pos F)) → chain (pos F)
 [dₙ,eₙ],f→f[dₙ,⊔eⱼ] {D} {E} {F} c f = record
   { monotone = record
-    { g = λ n → g f (pair (g (monotone (posets2.proj₁-chain c)) n) (⊔ (chain-complete E (posets2.proj₂-chain c))))
+    { g = λ n → g f (pair (g (monotone (proj₁-chain c)) n) (⊔ (chain-complete E (proj₂-chain c))))
     ; mon = λ n≤n′ → mon f (λ {fzero → (mon (monotone c) n≤n′ fzero); (fsucc fzero) → reflexive (pos E)})
     }
   }
@@ -146,7 +146,7 @@ slide-33-prop-cont : ∀ {D E F}
 [dₙ,eₙ],f,n→f[dₙ,eⱼ] : {D E F : domain} → (c : chain (pos (domain-product D E))) → (f : monotone-fun (pos (domain-product D E)) (pos F)) → ℕ → chain (pos F)
 [dₙ,eₙ],f,n→f[dₙ,eⱼ] {D} {E} {F} c f n = record
   { monotone = record
-    { g = λ j → g f (pair (g (monotone (posets2.proj₁-chain c)) n) (g (monotone (posets2.proj₂-chain c)) j))
+    { g = λ j → g f (pair (g (monotone (proj₁-chain c)) n) (g (monotone (proj₂-chain c)) j))
     ; mon = λ j≤j′ → mon f λ { fzero → reflexive (pos D); (fsucc fzero) → mon (monotone c) j≤j′ (fsucc fzero)}
     }
   }
@@ -260,7 +260,7 @@ lub-preserve (slide-33-prop-cont {D} {E} {F} f mon-arg-1 mon-arg-2 cont-arg-1 co
     ⊔ (chain-complete F (fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)))
   ≡⟨ same-f-same-lub
        {F} {fₖₖ-chain F (f[dᵢeⱼ] {D} {E} {F} c f mon-arg-1 mon-arg-2)} {chain-map c f-mon}
-       (posets2.function-extensionality (λ x → cong f pair-η))
+       (function-extensionality (λ x → cong f pair-η))
    ⟩
     ⊔ (chain-complete F (chain-map c f-mon))
   ∎
@@ -269,17 +269,17 @@ if-g : ∀ {D} → A (pos (domain-product 𝔹⊥ (domain-product D D))) → A (
 if-g {D} x with (x fzero)
 ...                     | inj false = x (fsucc fzero) (fsucc fzero)
 ...                     | inj true  = x (fsucc fzero) fzero
-...                     | ⊥₁        = posets2.least-element.⊥ (bottom D)
+...                     | ⊥₁        = least-element.⊥ (bottom D)
 
 
 if-mon-first : {D : domain} → {b b′ : A (pos 𝔹⊥)} → {e : A (pos (domain-product D D))} → (R (pos 𝔹⊥)) b b′ → (R (pos D)) (if-g {D} (pair b e) ) (if-g {D} (pair b′ e))
 
 
-if-mon-first {D} z≼n = posets2.least-element.⊥-is-bottom (bottom D)
+if-mon-first {D} z≼n = least-element.⊥-is-bottom (bottom D)
 if-mon-first {D} x≼x = reflexive (pos D)
 
 if-mon-second : (D : domain)
-  → ((b : posets2.B⊥ Bool)
+  → ((b : B⊥ Bool)
   → (e e′ : A (pos (domain-product D D)))
   → (R (pos (domain-product D D))) e e′
   → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
@@ -309,7 +309,7 @@ if-cont-second {D} {c} {⊥₁} =
   begin
     if-g (pair ⊥₁ (⊔ (chain-complete (domain-product D D) (proj₂-chain c))))
   ≡⟨ refl ⟩
-    posets2.least-element.⊥ (bottom D)
+    least-element.⊥ (bottom D)
   ≡⟨ antisymmetric (pos D)
        (least-element.⊥-is-bottom (bottom D))
        (lub2 (chain-complete D (chain-map (chain-fix-d-slide-33 c ⊥₁) if-mon)) λ {n} → reflexive (pos D))
