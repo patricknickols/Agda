@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module posets2 where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
@@ -232,12 +233,12 @@ flat-domain-pos B = record
                       ; transitive = trans-≼
                       } 
 
-record eventually-constant {B : Set} (c : chain (flat-domain-pos B)) : Set where
+record eventually-constant {P : poset} (c : chain P) : Set where
   field
     index : ℕ
-    eventual-val : B⊥ B
+    eventual-val : A P
     eventually-val : {m : ℕ} → index ≤ m → g (monotone c) m ≡ eventual-val
-    constant-UP : {eventual-val′ : B⊥ B} {index′ : ℕ}
+    constant-UP : {eventual-val′ : A P} {index′ : ℕ}
                   → ({m : ℕ} → index′ ≤ m → g (monotone c) m ≡ eventual-val′)
                   → eventual-val′ ≡ eventual-val  
 open eventually-constant
@@ -290,6 +291,15 @@ flat-domain A = record { pos = flat-domain-pos A
                          }
                        }
 
+
+chain-map-preserves-constancy : {P₁ P₂ : poset} →  {c : chain P₁} → (c′ : eventually-constant c) → (f : monotone-fun P₁ P₂) → eventually-constant (chain-map c f)
+
+chain-map-preserves-constancy c′ f = record
+                                  { index = index c′
+                                  ; eventual-val = g f (eventual-val c′)
+                                  ; eventually-val = λ {m} index≤m → cong (g f) (eventually-val c′ index≤m)
+                                  ; constant-UP = λ {eventual-val′} {index′} x → {!!}
+                                  }
 
 record cont-fun (P P′ : domain) : Set where
   field

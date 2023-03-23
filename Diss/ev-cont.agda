@@ -47,7 +47,7 @@ fₙ,dₙ→⊔ⱼfᵢdⱼ {D} {E} c = record
   { monotone = record
     { g = λ i → ⊔ (chain-complete E (fₙ,dₙ→fᵢdⱼ-chain {D} {E} c i))
     ; mon = λ {a} {a′} a≤a′ → lub2 (chain-complete E (fₙ,dₙ→fᵢdⱼ-chain c a))
-      λ {n} → poset.transitive (pos E)
+      λ {n} → transitive (pos E)
         (mon (monotone c) a≤a′ (fzero))
         (lub1 (chain-complete E (fₙ,dₙ→fᵢdⱼ-chain c a′)))
     }

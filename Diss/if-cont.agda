@@ -17,6 +17,7 @@ open cont-fun
 open lub
 open chain
 open least-element
+open eventually-constant
 
 
 poset-projections : (P₁ P₂ : poset) → (Fin 2) → poset
@@ -294,7 +295,10 @@ if-cont-first : ∀ {D}
     ≡
     ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D})
         (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂))))
-if-cont-first {D} {c} {e} = {!!}
+if-cont-first {D} {c} {e} with eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))
+...                            | ⊥₁ = {!!}
+...                            | inj false = {!!}
+...                            | inj true = {!!}
 
 
 if-cont-second : ∀ {D}
