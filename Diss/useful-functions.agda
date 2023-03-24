@@ -76,8 +76,10 @@ extend-function-mon f = record { g = λ { ⊥₁ → ⊥₁
 
 mon (extend-function {X} {Y} f) = extend-function-mon f
 
-lub-preserve (extend-function {X} {Y} f) c = constant-UP
-  (flat-domain-chain-eventually-constant (chain-map c (extend-function-mon f)))
+lub-preserve (extend-function {X} {Y} f) c = constant-UP-useful
+  {flat-domain-pos Y}
+  {chain-map c (extend-function-mon f)}
+  {flat-domain-chain-eventually-constant (chain-map c (extend-function-mon f))}
   {g (mon (extend-function f)) (⊔ (chain-complete (flat-domain X) c))}
   {index (flat-domain-chain-eventually-constant c)}
   (λ {m} index≤m →

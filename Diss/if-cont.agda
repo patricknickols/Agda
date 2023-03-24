@@ -1,14 +1,14 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module if-cont where
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
-open import Data.Nat using (ℕ)
+open import Data.Nat using (ℕ; _≤_)
 open import Data.Bool using (Bool; true; false)
 open import posets2
-open import useful-functions using (𝔹⊥; pair; pair-η)
+open import useful-functions using (𝔹⊥; pair; pair-η; pair-equality)
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
+open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
 
 open poset
 open domain
@@ -115,8 +115,39 @@ chain-fix-e-slide-33 : ∀ {D E}
 g (monotone (chain-fix-e-slide-33 {D} {E} c _)) n fzero = g (monotone (proj₁-chain {D} {E} c)) n
 g (monotone (chain-fix-e-slide-33 _ e)) _ (fsucc fzero) = e
 mon (monotone (chain-fix-e-slide-33 c _)) a≤a′ fzero = mon (monotone c) a≤a′ fzero
-mon (monotone (chain-fix-e-slide-33 {E = E} _ _)) _ (fsucc fzero) = poset.reflexive (pos E)
+mon (monotone (chain-fix-e-slide-33 {E = E} _ _)) _ (fsucc fzero) = reflexive (pos E)
 
+
+if-g : ∀ {D} → A (pos (domain-product 𝔹⊥ (domain-product D D))) → A (pos D)
+if-g {D} x with (x fzero)
+...                     | inj false = x (fsucc fzero) (fsucc fzero)
+...                     | inj true  = x (fsucc fzero) fzero
+...                     | ⊥₁        = least-element.⊥ (bottom D)
+
+
+if-mon-first : {D : domain} → {b b′ : A (pos 𝔹⊥)} → {e : A (pos (domain-product D D))} → (R (pos 𝔹⊥)) b b′ → (R (pos D)) (if-g {D} (pair b e) ) (if-g {D} (pair b′ e))
+
+
+if-mon-first {D} z≼n = least-element.⊥-is-bottom (bottom D)
+if-mon-first {D} x≼x = reflexive (pos D)
+
+if-mon-second : (D : domain)
+  → ((b : B⊥ Bool)
+  → (e e′ : A (pos (domain-product D D)))
+  → (R (pos (domain-product D D))) e e′
+  → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
+if-mon-second D ⊥₁ e e′ e≤e′ = ⊥-is-bottom (bottom D)
+if-mon-second D (inj false) e e′ e≤e′ = e≤e′ (fsucc fzero) 
+if-mon-second D (inj true) e e′ e≤e′ = e≤e′ fzero
+
+
+if-mon : ∀ {D} → monotone-fun (product-pos 𝔹⊥ (domain-product D D)) (pos D)
+if-mon {D} =
+  slide-33-prop
+    {𝔹⊥} {domain-product D D} {D}
+    if-g
+    (if-mon-first {D})
+    (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂)
 
 slide-33-prop-cont : ∀ {D E F}
    → (f : (A (pos (domain-product D E)) → A (pos F)))
@@ -266,27 +297,181 @@ lub-preserve (slide-33-prop-cont {D} {E} {F} f mon-arg-1 mon-arg-2 cont-arg-1 co
     ⊔ (chain-complete F (chain-map c f-mon))
   ∎
 
-if-g : ∀ {D} → A (pos (domain-product 𝔹⊥ (domain-product D D))) → A (pos D)
-if-g {D} x with (x fzero)
-...                     | inj false = x (fsucc fzero) (fsucc fzero)
-...                     | inj true  = x (fsucc fzero) fzero
-...                     | ⊥₁        = least-element.⊥ (bottom D)
+lemma-blah-blah : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (m : ℕ)
+  → (index≤m : Data.Nat._≤_ (index ev-const) m)
+  → g (monotone (chain-fix-e-slide-33 c e)) m ≡ pair (g (monotone (proj₁-chain c)) m) e
+
+lemma-blah-blah {D} c e ev-const m index≤m = dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
 
 
-if-mon-first : {D : domain} → {b b′ : A (pos 𝔹⊥)} → {e : A (pos (domain-product D D))} → (R (pos 𝔹⊥)) b b′ → (R (pos D)) (if-g {D} (pair b e) ) (if-g {D} (pair b′ e))
+lemma-fun-fun : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e
+    ≡
+    g (monotone (chain-fix-e-slide-33 c e)) (index (flat-domain-chain-eventually-constant (proj₁-chain c)))
+
+lemma-fun-fun c e ev-const = dependent-function-extensionality (λ {fzero → Eq.sym (eventually-val (flat-domain-chain-eventually-constant (proj₁-chain c)) refl-≤); (fsucc fzero) → refl})
 
 
-if-mon-first {D} z≼n = least-element.⊥-is-bottom (bottom D)
-if-mon-first {D} x≼x = reflexive (pos D)
+very-useful-lemma : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj true))
+  → (n : ℕ)
+  → R (pos D) (if-g (g (monotone (chain-fix-e-slide-33 c e)) n)) (e fzero)
 
-if-mon-second : (D : domain)
-  → ((b : B⊥ Bool)
-  → (e e′ : A (pos (domain-product D D)))
-  → (R (pos (domain-product D D))) e e′
-  → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
-if-mon-second D ⊥₁ e e′ e≤e′ = ⊥-is-bottom (bottom D)
-if-mon-second D (inj false) e e′ e≤e′ = e≤e′ (fsucc fzero) 
-if-mon-second D (inj true) e e′ e≤e′ = e≤e′ fzero
+
+very-useful-lemma″ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj true))
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → g (monotone (chain-fix-e-slide-33 c e)) n ≡ pair (inj true) e
+
+very-useful-lemma″ c e ev-const ev-val≡true n index≤n = dependent-function-extensionality (λ {fzero → Eq.trans (eventually-val ev-const index≤n) (ev-val≡true); (fsucc fzero) → refl})
+
+
+very-useful-lemma₂″ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj false))
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → g (monotone (chain-fix-e-slide-33 c e)) n ≡ pair (inj false) e
+
+
+very-useful-lemma₂″ c e ev-const ev-val≡false n index≤n = dependent-function-extensionality (λ {fzero → Eq.trans (eventually-val ev-const index≤n) (ev-val≡false); (fsucc fzero) → refl}) 
+
+
+very-useful-lemma₂′ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj false))
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → if-g (g (monotone (chain-fix-e-slide-33 c e)) n) ≡ if-g (pair (inj false) e)
+
+very-useful-lemma₂′ c e ev-const ev-val≡false n index≤n = cong if-g (very-useful-lemma₂″ c e ev-const ev-val≡false n index≤n)
+
+
+
+very-useful-lemma′ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj true))
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → if-g (g (monotone (chain-fix-e-slide-33 c e)) n) ≡ if-g (pair (inj true) e)
+
+very-useful-lemma′ c e ev-const ev-val≡true n index≤n = cong if-g (very-useful-lemma″ c e ev-const ev-val≡true n index≤n)
+
+
+very-useful-lemma {D} c e ev-const ev-val≡true n with ≤-dichotomy {n} {index ev-const}
+...                                  | (inj₁ n≤index) = transitive (pos D)
+                                                          (mon (monotone (chain-map (chain-fix-e-slide-33 c e) (if-mon {D}))) n≤index)
+                                                          (a≤b≡c→a≤c′ {A (pos D)} {R (pos D)}
+                                                            (reflexive (pos D))
+                                                            (very-useful-lemma′ c e ev-const ev-val≡true (index ev-const) refl-≤)
+                                                          )
+...                                  | (inj₂ index≤n) = a≡b≤c→a≤c {A (pos D)} {R (pos D)}
+                                                          (very-useful-lemma′ {D} c e ev-const ev-val≡true n index≤n)
+                                                          (reflexive (pos D))
+
+very-useful-lemma₂ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ (inj false))
+  → (n : ℕ)
+  → R (pos D) (if-g (g (monotone (chain-fix-e-slide-33 c e)) n)) (e (fsucc fzero))
+
+
+very-useful-lemma₂ {D} c e ev-const ev-val≡false n with ≤-dichotomy {n} {index ev-const}
+...               | inj₁ n≤index = transitive (pos D)
+                                     (mon (monotone (chain-map (chain-fix-e-slide-33 c e) (if-mon {D}))) n≤index)
+                                     (a≡b≤c→a≤c
+                                       {A (pos D)} {R (pos D)}
+                                       (very-useful-lemma₂′ {D} c e ev-const ev-val≡false (index ev-const) refl-≤) (reflexive (pos D)))
+...               | inj₂ index≤n = a≡b≤c→a≤c {A (pos D)} {R (pos D)} (very-useful-lemma₂′ {D} c e ev-const ev-val≡false n index≤n) (reflexive (pos D))
+
+
+very-useful-lemma₁″ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ ⊥₁)
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → g (monotone (chain-fix-e-slide-33 c e)) n ≡ pair ⊥₁ e
+
+
+very-useful-lemma₁″ c e ev-const ev-val≡⊥ n index≤n = dependent-function-extensionality (λ {fzero → Eq.trans (eventually-val ev-const index≤n) (ev-val≡⊥); (fsucc fzero) → refl}) 
+
+
+very-useful-lemma₁′ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ ⊥₁)
+  → (n : ℕ)
+  → (index (ev-const) ≤ n)
+  → if-g (g (monotone (chain-fix-e-slide-33 c e)) n) ≡ if-g (pair ⊥₁ e)
+
+very-useful-lemma₁′ c e ev-const ev-val≡⊥₁ n index≤n = cong if-g (very-useful-lemma₁″ c e ev-const ev-val≡⊥₁ n index≤n)
+
+very-useful-lemma₁ : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (ev-const : eventually-constant (proj₁-chain c))
+  → (eventual-val (ev-const) ≡ ⊥₁)
+  → (n : ℕ)
+  → R (pos D) (if-g (g (monotone (chain-fix-e-slide-33 c e)) n)) (⊥ (bottom D))
+
+
+very-useful-lemma₁ {D} c e ev-const ev-val≡⊥ n with ≤-dichotomy {n} {index ev-const}
+...               | inj₁ n≤index = transitive (pos D)
+                                     (mon (monotone (chain-map (chain-fix-e-slide-33 c e) (if-mon {D}))) n≤index)
+                                     (a≡b≤c→a≤c
+                                       {A (pos D)} {R (pos D)}
+                                       (very-useful-lemma₁′ {D} c e ev-const ev-val≡⊥ (index ev-const) refl-≤) (reflexive (pos D)))
+...               | inj₂ index≤n = a≡b≤c→a≤c {A (pos D)} {R (pos D)} (very-useful-lemma₁′ {D} c e ev-const ev-val≡⊥ n index≤n) (reflexive (pos D))
+
+
+
+eventually-constant-d-slide-33-lemma : ∀ {D}
+  → (c : chain (pos (domain-product 𝔹⊥ (domain-product D D))))
+  → (e : A (pos (domain-product D D)))
+  → (eventually-constant (proj₁-chain c))
+  → (eventually-constant (chain-map (chain-fix-e-slide-33 c e) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D}) (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂))))
+
+
+eventually-constant-d-slide-33-lemma {D} c e ev-const = 
+  record
+                                                      { index = index ev-const
+                                                      ; eventual-val = if-g {D} (pair (eventual-val ev-const) e)  
+                                                      ; eventually-val = λ {m} index≤m →
+                                                          begin
+                                                            g (monotone (chain-map (chain-fix-e-slide-33 c e) if-mon)) m
+                                                          ≡⟨ refl ⟩
+                                                            if-g (g (monotone (chain-fix-e-slide-33 c e)) m)
+                                                          ≡⟨ cong if-g (lemma-blah-blah {D} c e ev-const m index≤m) ⟩
+                                                            if-g (pair (g (monotone (proj₁-chain c)) m) e)
+                                                          ≡⟨ cong (λ x → if-g (pair x e)) (eventually-val ev-const index≤m) ⟩
+                                                            if-g (pair (eventual-val ev-const) e)
+                                                          ∎
+                                                      }
 
 if-cont-first : ∀ {D}
   → {c : chain (pos (domain-product 𝔹⊥ (domain-product D D)))}
@@ -295,10 +480,74 @@ if-cont-first : ∀ {D}
     ≡
     ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) (slide-33-prop {𝔹⊥} {domain-product D D} {D} if-g (if-mon-first {D})
         (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂))))
-if-cont-first {D} {c} {e} with eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))
-...                            | ⊥₁ = {!!}
-...                            | inj false = {!!}
-...                            | inj true = {!!}
+
+
+data Singleton {a} {A : Set a} (x : A) : Set a where
+  _with≡_ : (y : A) → x ≡ y → Singleton x
+
+inspect : ∀ {a} {A : Set a} (x : A) → Singleton x
+inspect x = x with≡ refl
+
+
+if-cont-first {D} {c} {e} with inspect (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c)))
+...                            | ⊥₁ with≡ eq = 
+                                  begin
+                                    if-g (pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e)
+                                  ≡⟨ cong (λ x → if-g (pair x e)) eq ⟩
+                                    ⊥ (bottom D)
+                                  ≡⟨ antisymmetric (pos D)
+                                       (⊥-is-bottom (bottom D))
+                                       (lub2 (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon)) {⊥ (bottom D)} (λ {n} → very-useful-lemma₁ c e (flat-domain-chain-eventually-constant (proj₁-chain c)) eq n))
+                                   ⟩ 
+                                    ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon))
+                                  ∎
+...                            | (inj false) with≡ eq = 
+                                  begin
+                                    if-g (pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e)
+                                  ≡⟨ cong (λ x → if-g (pair x e)) eq ⟩
+                                    e (fsucc fzero)
+                                  ≡⟨ antisymmetric (pos D)
+                                       (a≡b≤c→a≤c {A (pos D)} {R (pos D)}
+                                         (begin
+                                           e (fsucc fzero)
+                                          ≡⟨ Eq.sym (cong (λ x → if-g (pair x e)) eq) ⟩
+                                            if-g (pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e)
+                                          ≡⟨ Eq.sym
+                                               (eventually-val
+                                                 (eventually-constant-d-slide-33-lemma c e
+                                                   (flat-domain-chain-eventually-constant (proj₁-chain c)))
+                                                  refl-≤)
+                                           ⟩
+                                            g (monotone (chain-map (chain-fix-e-slide-33 c e) if-mon)) (index (flat-domain-chain-eventually-constant (proj₁-chain c)))
+                                          ∎)
+                                          (lub1 (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon)) {index (flat-domain-chain-eventually-constant (proj₁-chain c))}))
+                                       (lub2 (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon)) {e (fsucc fzero)} (λ {n} → very-useful-lemma₂ c e (flat-domain-chain-eventually-constant (proj₁-chain c)) eq n))
+                                   ⟩
+                                    ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon))
+                                  ∎
+...                            | (inj true) with≡ eq = 
+                                     begin
+                                       if-g (pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e)
+                                     ≡⟨ cong (λ x → if-g (pair x e)) eq ⟩
+                                       e fzero
+                                     ≡⟨ antisymmetric (pos D)
+                                          (a≡b≤c→a≤c {A (pos D)} {R (pos D)}
+                                            (begin
+                                              e fzero
+                                            ≡⟨ refl ⟩
+                                              if-g (pair (inj true) e)
+                                            ≡⟨ Eq.sym (cong (λ x → if-g (pair x e)) eq) ⟩
+                                              if-g (pair (eventual-val (flat-domain-chain-eventually-constant (proj₁-chain c))) e)
+                                            ≡⟨ cong if-g (lemma-fun-fun c e (flat-domain-chain-eventually-constant (proj₁-chain c)))  ⟩
+                                              g (monotone (chain-map (chain-fix-e-slide-33 c e) if-mon)) (index (flat-domain-chain-eventually-constant (proj₁-chain c)))
+                                            ∎
+                                            )
+                                            (lub1 (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon)) {index (flat-domain-chain-eventually-constant (proj₁-chain c))}))
+                                          (lub2 (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon)) {e fzero} (λ {n} → very-useful-lemma c e (flat-domain-chain-eventually-constant (proj₁-chain c)) eq n))
+                                      ⟩
+                                        ⊔ (chain-complete D (chain-map (chain-fix-e-slide-33 c e) if-mon))
+                                     ∎
+
 
 
 if-cont-second : ∀ {D}
@@ -348,14 +597,6 @@ if-cont-second {D} {c} {inj false} =
   ∎
 
 if-cont : ∀ {D} → cont-fun (domain-product 𝔹⊥ (domain-product D D)) D
-if-mon : ∀ {D} → monotone-fun (product-pos 𝔹⊥ (domain-product D D)) (pos D)
-if-mon {D} =
-  slide-33-prop
-    {𝔹⊥} {domain-product D D} {D}
-    if-g
-    (if-mon-first {D})
-    (λ {d} {e₁} {e₂} → if-mon-second D d e₁ e₂)
-
 if-cont {D} =
   slide-33-prop-cont
     {𝔹⊥} {domain-product D D} {D}

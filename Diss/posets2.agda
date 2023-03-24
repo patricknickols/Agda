@@ -262,7 +262,9 @@ b≤max-a-b {zero} (suc b) = refl-≤
 b≤max-a-b {suc a} (suc b) = s≤s (b≤max-a-b {a} b)
 
 constant-UP : {P : poset} {c : chain P} (ev-const ev-const′ : eventually-constant c) → eventual-val ev-const ≡ eventual-val ev-const′
-constant-UP ev-const ev-const′ = Eq.trans (Eq.sym (eventually-val ev-const {max (index ev-const) (index ev-const′)} (a≤max-a-b (index ev-const)))) (eventually-val ev-const′ (b≤max-a-b {index ev-const} (index ev-const′)))
+constant-UP ev-const ev-const′ = Eq.trans
+                                   (Eq.sym (eventually-val ev-const {max (index ev-const) (index ev-const′)} (a≤max-a-b (index ev-const))))
+                                   (eventually-val ev-const′ (b≤max-a-b {index ev-const} (index ev-const′)))
 
 constant-UP-useful : {P : poset} {c : chain P} {ev-const : eventually-constant c} {eventual-val′ : A P} {index′ : ℕ} → ({m : ℕ} → index′ ≤ m → g (monotone c) m ≡ eventual-val′) → eventual-val′ ≡ (eventual-val ev-const)
 
