@@ -238,12 +238,42 @@ record eventually-constant {P : poset} (c : chain P) : Set where
     index : ℕ
     eventual-val : A P
     eventually-val : {m : ℕ} → index ≤ m → g (monotone c) m ≡ eventual-val
-    constant-UP : {eventual-val′ : A P} {index′ : ℕ}
-                  → ({m : ℕ} → index′ ≤ m → g (monotone c) m ≡ eventual-val′)
-                  → eventual-val′ ≡ eventual-val  
 open eventually-constant
 
---postulate chain-complete-flat-domain-pos-B : ∀ {B} → (c : chain (flat-domain-pos B)) → lub c
+max : ℕ → ℕ → ℕ
+max zero b = b
+max a zero = a
+max (suc a) (suc b) = suc (max a b) 
+
+max-sym : (a b : ℕ) → max a b ≡ max b a
+max-sym zero zero = Eq.refl
+max-sym zero (suc b) = Eq.refl
+max-sym (suc a) zero = Eq.refl
+max-sym (suc a) (suc b) = Eq.cong suc (max-sym a b)
+
+a≤max-a-b : {b : ℕ} (a : ℕ) → a ≤ (max a b)
+a≤max-a-b zero = z≤n
+a≤max-a-b {zero} (suc a) = refl-≤
+a≤max-a-b {suc b} (suc a) = s≤s (a≤max-a-b {b} a)
+
+b≤max-a-b : {a : ℕ} (b : ℕ) → b ≤ (max a b)
+b≤max-a-b zero = z≤n
+b≤max-a-b {zero} (suc b) = refl-≤
+b≤max-a-b {suc a} (suc b) = s≤s (b≤max-a-b {a} b)
+
+constant-UP : {P : poset} {c : chain P} (ev-const ev-const′ : eventually-constant c) → eventual-val ev-const ≡ eventual-val ev-const′
+constant-UP ev-const ev-const′ = Eq.trans (Eq.sym (eventually-val ev-const {max (index ev-const) (index ev-const′)} (a≤max-a-b (index ev-const)))) (eventually-val ev-const′ (b≤max-a-b {index ev-const} (index ev-const′)))
+
+constant-UP-useful : {P : poset} {c : chain P} {ev-const : eventually-constant c} {eventual-val′ : A P} {index′ : ℕ} → ({m : ℕ} → index′ ≤ m → g (monotone c) m ≡ eventual-val′) → eventual-val′ ≡ (eventual-val ev-const)
+
+constant-UP-useful {ev-const = ev-const} {eventual-val′} {index′} eventually-val′ = constant-UP (record
+  { index = index′
+  ; eventual-val = eventual-val′
+  ; eventually-val = eventually-val′
+  }
+  ) ev-const
+
+
 postulate flat-domain-chain-eventually-constant : ∀ {B} → (c : chain (flat-domain-pos B)) → eventually-constant c
 
 a≤b≡c→a≤c : {a b c : ℕ} → a ≤ b → b ≡ c → a ≤ c
@@ -298,7 +328,6 @@ chain-map-preserves-constancy c′ f = record
                                   { index = index c′
                                   ; eventual-val = g f (eventual-val c′)
                                   ; eventually-val = λ {m} index≤m → cong (g f) (eventually-val c′ index≤m)
-                                  ; constant-UP = λ {eventual-val′} {index′} x → {!!}
                                   }
 
 record cont-fun (P P′ : domain) : Set where
@@ -559,22 +588,6 @@ diagonalising-lemma : (P : domain) → (double-index-fun : monotone-fun nats²-p
 
 swap-≡ : {A : Set} {a b : A} → a ≡ b → b ≡ a
 swap-≡ Eq.refl = Eq.refl
-
-max : ℕ → ℕ → ℕ
-max zero b = b
-max a zero = a
-max (suc a) (suc b) = suc (max a b) 
-
-max-sym : (a b : ℕ) → max a b ≡ max b a
-max-sym zero zero = Eq.refl
-max-sym zero (suc b) = Eq.refl
-max-sym (suc a) zero = Eq.refl
-max-sym (suc a) (suc b) = Eq.cong suc (max-sym a b)
-
-a≤max-a-b : {b : ℕ} (a : ℕ) → a ≤ (max a b)
-a≤max-a-b zero = _≤_.z≤n
-a≤max-a-b {zero} (suc a) = refl-≤
-a≤max-a-b {suc b} (suc a) = _≤_.s≤s (a≤max-a-b {b} a)
 
 
 dₘₙ≤⊔dₖₖ : {m n : ℕ} (P : domain) → (double-index-fun : monotone-fun nats²-pos (pos P)) → R (pos P) (g (double-index-fun) (m , n)) (⊔ (chain-complete P (fₖₖ-chain P double-index-fun)))
