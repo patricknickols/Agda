@@ -8,7 +8,7 @@ open import ev-cont using (ev-cont)
 open import if-cont using (if-cont)
 open import cur-cont using (cur-cont)
 open import useful-functions using (ℕ⊥; 𝔹⊥; _∘_; constant-fun-is-cont; pair-f; extend-function; domain-dependent-projection)
-open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_)
+open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_; _≤_)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Bool using (Bool; true; false)
 open import Relation.Nullary using (¬_)
@@ -114,6 +114,17 @@ lookup₂ {(Γ , _)} (fsucc x) = lookup₂ {Γ} x
 count : ∀ {Γ} → {n : Fin (length Γ)} → Γ ∋ lookup₂ {Γ} n
 count {Γ , x} {fzero} = Z
 count {Γ , x} {fsucc n} = S (count {Γ} {n})
+
+conv : ∀ {x} → {Γ : Context} → (Γ ∋ x) → Fin (length Γ)
+conv Z = fzero
+conv (S Γ∋x) = fsucc (conv Γ∋x)
+
+conv₂ : {y : ℕ} (x : ℕ) → x < y → Fin y
+conv₂ zero (s≤s x<y) = fzero
+conv₂ (suc x) (s≤s x<y) = fsucc (conv₂ x x<y) 
+
+#_ : ∀ {Γ} → (n : Fin (length Γ)) → Γ ⊢ lookup₂ n
+#_ n = ` (count {n = n}) 
 
 ext : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ∋ A) → (∀ {A B} → Γ , B ∋ A → Δ , B ∋ A)
 ext ρ Z     = Z
@@ -284,33 +295,54 @@ progress (μ M) = step β-μ
 ⟦ τ ⇒ τ′ ⟧ = function-domain ⟦ τ ⟧ ⟦ τ′ ⟧
 
 context-⟦_⟧ : Context → domain
-context-⟦ Γ ⟧ = posets2.domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
+context-⟦ Γ ⟧ = domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
+
+helpful-lemma-chain : {Γ : Context} {A : Type} → chain (pos (domain-product context-⟦ Γ ⟧ ⟦ A ⟧)) → chain (pos (context-⟦ Γ , A ⟧))
+g (monotone (helpful-lemma-chain c)) = λ x → λ {fzero → g (monotone c) x (fsucc fzero); (fsucc n) → g (monotone c) x fzero n}
+mon (monotone (helpful-lemma-chain c)) a≤a′ fzero = mon (monotone c) a≤a′ (fsucc fzero)
+mon (monotone (helpful-lemma-chain c)) a≤a′ (fsucc i) = mon (monotone c) a≤a′ (fzero) i 
 
 helpful-lemma-blah : {Γ : Context} {A B : Type} → cont-fun (context-⟦ Γ , A ⟧) ⟦ B ⟧ → cont-fun (domain-product context-⟦ Γ ⟧ ⟦ A ⟧) ⟦ B ⟧
-helpful-lemma-blah f = record { mon = record { g = λ x → monotone-fun.g (cont-fun.mon f) λ {fzero → x (fsucc fzero); (fsucc n) → x fzero n}
-                                             ; mon = λ a≤a′ → monotone-fun.mon (cont-fun.mon f) λ {fzero → a≤a′ (fsucc fzero); (fsucc n) → a≤a′ fzero n}
-                                             }
-                              ; lub-preserve = λ c → {!!}
-                              }
+mon (helpful-lemma-blah f) = record { g = λ x → g (mon f) λ {fzero → x (fsucc fzero); (fsucc n) → x fzero n}
+                                    ; mon = λ a≤a′ → mon (mon f) λ {fzero → a≤a′ (fsucc fzero); (fsucc n) → a≤a′ fzero n}
+                                    }
+lub-preserve (helpful-lemma-blah {Γ} {A} {B} f) c =
+  begin
+    g (mon (helpful-lemma-blah {Γ} {A} {B} f)) (⊔ (chain-complete (domain-product context-⟦ Γ ⟧ ⟦ A ⟧) c))
+  ≡⟨ cong (g (mon f)) (dependent-function-extensionality (λ {fzero → refl; (fsucc n) → refl})) ⟩
+    g (mon f) (⊔ (chain-complete context-⟦ Γ , A ⟧ (helpful-lemma-chain {Γ} {A} c)))
+  ≡⟨ lub-preserve f (helpful-lemma-chain c) ⟩
+    ⊔ (chain-complete ⟦ B ⟧ (chain-map (helpful-lemma-chain c) (mon f)))
+  ≡⟨ same-f-same-lub {⟦ B ⟧}
+       {chain-map (helpful-lemma-chain c) (mon f)}
+       {chain-map c (mon (helpful-lemma-blah {Γ} {A} {B} f))}
+       (function-extensionality
+         (λ x → cong (g (mon f))
+           (dependent-function-extensionality
+             (λ {fzero → refl; (fsucc n) → refl}))))
+   ⟩
+    ⊔ (chain-complete ⟦ B ⟧ (chain-map c (mon (helpful-lemma-blah {Γ} {A} {B} f))))
+  ∎
+
 
 s⊥ : cont-fun ℕ⊥ ℕ⊥
-s : ℕ → poset.A (domain.pos ℕ⊥)
+s : ℕ → A (pos ℕ⊥)
 s x = inj (suc x)
 s⊥ = extend-function s
 
 z⊥ : cont-fun ℕ⊥ 𝔹⊥
-z : ℕ → poset.A (domain.pos 𝔹⊥)
+z : ℕ → A (pos 𝔹⊥)
 z zero = inj true
 z (suc n) = inj false
 z⊥ = extend-function z
 
 p⊥ : cont-fun ℕ⊥ ℕ⊥
-p : ℕ → poset.A (domain.pos ℕ⊥)
+p : ℕ → A (pos ℕ⊥)
 p zero = inj zero
 p (suc n) = inj n
 p⊥ = extend-function p
 
-p⊥-inv-s⊥ : {x : posets2.B⊥ ℕ} → monotone-fun.g (cont-fun.mon p⊥) ((monotone-fun.g (cont-fun.mon s⊥)) x) ≡ x
+p⊥-inv-s⊥ : {x : B⊥ ℕ} → g (mon p⊥) ((g (mon s⊥)) x) ≡ x
 p⊥-inv-s⊥ {⊥₁} = refl
 p⊥-inv-s⊥ {inj zero} = refl
 p⊥-inv-s⊥ {inj (suc x)} = refl
@@ -318,13 +350,8 @@ p⊥-inv-s⊥ {inj (suc x)} = refl
 constant-fun : ∀ {Γ} → (B : Set) → B → cont-fun context-⟦ Γ ⟧ (flat-domain B)
 constant-fun B b = constant-fun-is-cont b
 
-conv : ∀ {x} → {Γ : Context} → (Γ ∋ x) → Fin (length Γ)
-conv Z = fzero
-conv (S Γ∋x) = fsucc (conv Γ∋x)
-
-
 project-x′ : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
-                                                (posets2.domain-dependent-product (Fin (length Γ))
+                                                (domain-dependent-product (Fin (length Γ))
                                                   (λ x → ⟦ lookup₂ {Γ} x ⟧))
                                                 ⟦ lookup₂ (conv Γ∋x) ⟧
 project-x′ {x} Γ Γ∋x =  domain-dependent-projection (Fin (length Γ)) (λ x → ⟦ lookup₂ x ⟧) (conv Γ∋x)
@@ -334,7 +361,7 @@ project-x-lemma Z = refl
 project-x-lemma (S Γ∋x) = project-x-lemma Γ∋x
 
 project-x : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
-                                                (posets2.domain-dependent-product (Fin (length Γ))
+                                                (domain-dependent-product (Fin (length Γ))
                                                   (λ x → ⟦ lookup₂ {Γ} x ⟧))
                                                 ⟦ x ⟧
 project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ∋x
@@ -353,196 +380,13 @@ project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ
 ⟦ Γ ⊢′ ƛ_ {A = A} {B} M ⟧ = cur-cont (helpful-lemma-blah {Γ} {A} {B} ⟦ Γ , A ⊢′ M ⟧)
 ⟦ Γ ⊢′ μ M ⟧ = tarski-continuous ∘ ⟦ Γ ⊢′ M ⟧ 
 
-term-⟦_⟧ : ∀ {A} → (M : ∅ ⊢ A) → cont-fun context-⟦ ∅ ⟧ ⟦ A ⟧
-term-⟦ M ⟧ = ⟦ ∅ ⊢′ M ⟧
+⟦_⟧-program : ∀ {T} → (M : ∅ ⊢ T) → A (pos ⟦ T ⟧)
+⟦_⟧-program M = g (mon ⟦ ∅ ⊢′ M ⟧) λ() 
 
-if-true : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁}
-  → (g (mon if-cont) (g (mon (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧))) x))
-     ≡
-    (g (mon term-⟦ V ⟧) x)
-
-if-false : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁} 
-  → (g (mon if-cont) (g (mon (pair-f term-⟦ `false ⟧ (pair-f term-⟦ y ⟧ term-⟦ V ⟧))) x))
-     ≡
-    (g (mon term-⟦ V ⟧) x)
+zero-right : ⟦ `zero ⟧-program ≡ (inj zero)
+zero-right = refl
 
 
-soundness : ∀ {A} → {M : ∅ ⊢ A} {V : ∅ ⊢ A} → (step : M —→ V) → term-⟦ M ⟧ ≡ term-⟦ V ⟧
-soundness (ξ-·₁ {L = L} {L′} {M} L→L′) =
-  begin
-    term-⟦ L · M ⟧
-  ≡⟨ refl ⟩
-    ev-cont ∘ pair-f term-⟦ L ⟧ term-⟦ M ⟧
-  ≡⟨ cong (_∘_ ev-cont) (cong (λ x → pair-f x term-⟦ M ⟧) (soundness L→L′)) ⟩
-    ev-cont ∘ pair-f term-⟦ L′ ⟧ term-⟦ M ⟧
-  ≡⟨ refl ⟩
-    term-⟦ L′ · M ⟧
-  ∎
-soundness (ξ-·₂ {V = V} {M} {M′} v M→M′) =
-  begin
-    term-⟦ V · M ⟧
-  ≡⟨ refl ⟩
-    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M ⟧
-  ≡⟨ cong (_∘_ ev-cont) (cong (pair-f term-⟦ V ⟧) (soundness M→M′)) ⟩
-    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M′ ⟧
-  ≡⟨ refl ⟩
-    term-⟦ V · M′ ⟧
-  ∎
-soundness {A₁} (β-ƛ {A = A} {N = N} {W} v) =
-  begin
-    term-⟦ (ƛ N) · W ⟧
-  ≡⟨ refl ⟩
-    ev-cont ∘ pair-f term-⟦ ƛ N ⟧ term-⟦ W ⟧
-  ≡⟨ {!!} ⟩ 
-    term-⟦ subst σ N ⟧
-  ≡⟨ cong term-⟦_⟧ {!!} ⟩
-    term-⟦ N [ W ] ⟧
-  ∎
-  where
-  σ : ∀ {A₂} → ∅ , A ∋ A₂ → ∅ ⊢ A₂
-  σ Z     = W
-  σ (S x) = ` x
-soundness (ξ-suc {M = M} {M′} M→M′) =
-  begin
-    term-⟦ `suc M ⟧
-  ≡⟨ refl ⟩
-    (s⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ cong (_∘_ s⊥) (soundness M→M′) ⟩
-    (s⊥ ∘ term-⟦ M′ ⟧)
-  ≡⟨ refl ⟩
-    term-⟦ `suc M′ ⟧
-  ∎
-soundness (ξ-pred {M = M} {M′} M→M′) =
-  begin
-    term-⟦ `pred M ⟧
-  ≡⟨ refl ⟩
-    (p⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ cong (_∘_ p⊥) (soundness M→M′) ⟩
-    (p⊥ ∘ term-⟦ M′ ⟧)
-  ≡⟨ refl ⟩
-    term-⟦ `pred M′ ⟧
-  ∎
-soundness β-pred₁ = cont-fun-extensionality (λ ⊥ → refl)
-soundness {V = V} (β-pred₂ v) =
-  begin
-    term-⟦ `pred (`suc V) ⟧
-  ≡⟨ refl ⟩
-    (p⊥ ∘ (s⊥ ∘ term-⟦ V ⟧))
-  ≡⟨ cont-fun-extensionality (λ ⊥ → p⊥-inv-s⊥) ⟩
-    term-⟦ V ⟧
-  ∎ 
-soundness (ξ-if {B = B} {B′} {x} {y} B→B′) =
-  begin
-    term-⟦ if B then x else y ⟧
-  ≡⟨ refl ⟩
-    if-cont ∘ (pair-f term-⟦ B ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧))
-  ≡⟨ cong (_∘_ if-cont) (cong (λ b → pair-f b (pair-f term-⟦ x ⟧ term-⟦ y ⟧)) (soundness B→B′)) ⟩
-    (if-cont ∘ (pair-f term-⟦ B′ ⟧ (pair-f term-⟦ x ⟧ term-⟦ y ⟧)))
-  ≡⟨ refl ⟩
-    term-⟦ if B′ then x else y ⟧
-  ∎
-soundness {A} {V = V} (β-if₁ {y = y}) =
-  begin
-    term-⟦ if `true then V else y ⟧
-  ≡⟨ refl ⟩
-    (if-cont ∘ (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧)) )
-  ≡⟨ cont-fun-extensionality (λ ⊥ → if-true {⊥} {A} {V} {y}) ⟩
-    term-⟦ V ⟧
-  ∎
-soundness {A} {V = V} (β-if₂ {x = x}) =
-  begin
-    term-⟦ if `false then x else V ⟧
-  ≡⟨ refl ⟩
-    if-cont ∘ (pair-f term-⟦ `false ⟧ (pair-f term-⟦ x ⟧ term-⟦ V ⟧))
-  ≡⟨ cont-fun-extensionality (λ ⊥ → if-false {⊥} {A} {V} {x}) ⟩
-    term-⟦ V ⟧
-  ∎
-soundness {A} (β-μ {N = N}) =
-   begin
-     term-⟦ μ N ⟧
-   ≡⟨ refl ⟩
-     tarski-continuous ∘ term-⟦ N ⟧
-   ≡⟨ cont-fun-extensionality
-     (λ x → lfp-is-fixed { ⟦ A ⟧ } {g (mon term-⟦ N ⟧) x})
-    ⟩
-     (ev-cont ∘ pair-f term-⟦ N ⟧ (tarski-continuous ∘ term-⟦ N ⟧))
-   ≡⟨ refl ⟩
-    (ev-cont ∘ (pair-f term-⟦ N ⟧ term-⟦ μ N ⟧))
-  ≡⟨ refl ⟩
-    term-⟦ N · (μ N) ⟧
-  ∎
-soundness (ξ-is-zero {M = M} {M′} M→M′) =
-  begin
-    term-⟦ `is-zero M ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ term-⟦ M ⟧
-  ≡⟨ cong (_∘_ z⊥) (soundness M→M′) ⟩
-    z⊥ ∘ term-⟦ M′ ⟧
-  ≡⟨ refl ⟩
-    term-⟦ `is-zero M′ ⟧
-  ∎
-soundness β-is-zero₁ =
-  begin
-    term-⟦ `is-zero `zero ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ term-⟦ `zero ⟧
-  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
-    term-⟦ `true ⟧
-  ∎
-soundness (β-is-zero₂ {M = `zero} x) =
-  begin
-    term-⟦ `is-zero (`suc `zero) ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ `zero ⟧)
-  ≡⟨ posets2.cont-fun-extensionality (λ ⊥ → refl) ⟩
-    term-⟦ `false ⟧
-  ∎
-soundness (β-is-zero₂ {M = `suc M} x) =
-   begin
-     term-⟦ `is-zero (`suc (`suc M)) ⟧
-   ≡⟨ refl ⟩
-     (z⊥ ∘ (s⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)) )
-   ≡⟨ cont-fun-extensionality (λ ⊥ → {!!} ) ⟩
-     term-⟦ `false ⟧
-    ∎
-
-∘-assoc : {D₀ D₁ D₂ D₃ : domain} {f : cont-fun D₂ D₃} {g : cont-fun D₁ D₂} {h : cont-fun D₀ D₁} → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
-∘-assoc {f} {g} {h} = cont-fun-extensionality λ ⊥ → refl
-
-lemma-blah-proof : ∀ {M} → Value M → z⊥ ∘ (term-⟦ `suc M ⟧) ≡ term-⟦ `false ⟧
-
-
-z⊥∘s⊥-inj-n : {n : ℕ} → g (mon (z⊥ ∘ s⊥)) (inj n) ≡ inj false
-z⊥∘s⊥-inj-n = refl
-
-
-
-lemma-blah-proof {M} V-zero = 
-  begin
-    (z⊥ ∘ term-⟦ `suc M ⟧)
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ Eq.sym (∘-assoc {f = z⊥} {g = s⊥} {h = term-⟦ M ⟧}) ⟩
-    (z⊥ ∘ s⊥) ∘ term-⟦ M ⟧
-  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
-    term-⟦ `false ⟧
-  ∎
-lemma-blah-proof {.(`suc V)} (V-suc {V = V} val-M) =
-  begin
-    (z⊥ ∘ term-⟦ `suc (`suc V) ⟧)
-  ≡⟨ refl ⟩
-    (z⊥ ∘ (s⊥ ∘ term-⟦ `suc V ⟧))
-  ≡⟨ Eq.sym (∘-assoc { f = z⊥} { s⊥ } { term-⟦ `suc V ⟧ }) ⟩
-    ((z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧)
-  ≡⟨ cont-fun-extensionality (λ ⊥ →
-     begin
-       g (mon ((z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧)) ⊥
-     ≡⟨ {!z⊥∘s⊥-inj-n { g (mon term-⟦ `suc V ⟧) ⊥ }!} ⟩
-       inj false
-     ≡⟨ refl ⟩
-       g (mon term-⟦ `false ⟧) ⊥
-     ∎)
-   ⟩
-    term-⟦ `false ⟧
-  ∎
-
+--⟦ μ (ƛ (`suc (# fzero))) ⟧-program ≡ ⊥₁
+--⟦ μ (ƛ (`pred (# fzero))) ⟧-program ≡ inj zero
+--g (mon (⟦ μ (ƛ_ {A = `ℕ ⇒ `ℕ } (ƛ_  {A = `ℕ} (if (`is-zero (# fzero)) then (`suc `zero) else (# (fsucc fzero) · (`pred (# fzero)))))) ⟧-program))
