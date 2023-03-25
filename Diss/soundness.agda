@@ -10,10 +10,12 @@ open import if-cont using (if-cont)
 open import cur-cont using (cur-cont)
 open import useful-functions using (pair-f; _∘_)
 
-open import Data.Nat using (ℕ)
+open import Data.Nat using (ℕ; zero; suc)
 open import Data.Bool using (Bool; true; false)
+open import Data.Product using (∃-syntax) renaming (_,_ to ⟨_,_⟩)
 
-
+open poset
+open domain
 open cont-fun
 open monotone-fun
 
@@ -21,28 +23,27 @@ open monotone-fun
 term-⟦_⟧ : ∀ {A} → (M : ∅ ⊢ A) → cont-fun context-⟦ ∅ ⟧ ⟦ A ⟧
 term-⟦ M ⟧ = ⟦ ∅ ⊢′ M ⟧
 
-if-true : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁}
-  → (g (mon if-cont) (g (mon (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧))) x))
-     ≡
-     g (mon term-⟦ V ⟧) x
+z⊥∘s⊥-n≡false : ∀ {n} → g (mon (z⊥ ∘ s⊥)) (inj n) ≡ inj false
+z⊥∘s⊥-n≡false {zero} = refl
+z⊥∘s⊥-n≡false {suc x} = refl
 
-if-true {x} {A₁} {V} {y} =
-  begin
-    g (mon if-cont)
-      (g (mon (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧))) x)
-  ≡⟨ refl ⟩
-    g (mon if-cont)
-      (g (mon (pair-f (constant-fun {∅} Bool true) (pair-f term-⟦ V ⟧ term-⟦ y ⟧)))x)
-  ≡⟨ refl ⟩
-    g (mon term-⟦ V ⟧) x
-  ∎
+well-typed-nats-are-not-bot : (M : ∅ ⊢ `ℕ) → (x : Value M) → {⊥ : A (pos context-⟦ ∅ ⟧)} → ∃[ n ] (g (mon term-⟦ M ⟧) ⊥ ≡ (inj n))
+well-typed-nats-are-not-bot `zero V-zero = ⟨ 0 , refl ⟩
+well-typed-nats-are-not-bot (`suc M) (V-suc x) {⊥} with well-typed-nats-are-not-bot M x {⊥}
+...                                 | ⟨ n , proof ⟩ = ⟨ suc n , cong (λ v → g (mon s⊥) v) proof ⟩
 
-if-false : ∀ {x} {A₁} {V : ∅ ⊢ A₁} {y : ∅ ⊢ A₁} 
-  → (g (mon if-cont) (g (mon (pair-f term-⟦ `false ⟧ (pair-f term-⟦ y ⟧ term-⟦ V ⟧))) x))
-     ≡
-    (g (mon term-⟦ V ⟧) x)
-
-if-false = refl
+z⊥∘s⊥-soundness-lemma : (M : ∅ ⊢ `ℕ) → (x : Value M) → {⊥ : A (pos context-⟦ ∅ ⟧)} → g (mon (z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧))) ⊥ ≡ inj false
+z⊥∘s⊥-soundness-lemma M x {⊥} with well-typed-nats-are-not-bot M x {⊥}
+...            | ⟨ n , proof ⟩ = 
+                 begin
+                   g (mon (z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧))) (⊥)
+                 ≡⟨ refl ⟩
+                   g (mon (z⊥ ∘ s⊥)) (g (mon term-⟦ M ⟧) ⊥)
+                 ≡⟨ cong (λ x → (g (mon (z⊥ ∘ s⊥))) x) proof ⟩
+                   g (mon (z⊥ ∘ s⊥)) (inj n)
+                 ≡⟨ z⊥∘s⊥-n≡false {n} ⟩
+                   inj false
+                 ∎
 
 soundness : ∀ {A} → {M : ∅ ⊢ A} {V : ∅ ⊢ A} → (step : M —→ V) → term-⟦ M ⟧ ≡ term-⟦ V ⟧
 soundness (ξ-·₁ {L = L} {L′} {M} L→L′) =
@@ -115,7 +116,7 @@ soundness {A} {V = V} (β-if₁ {y = y}) =
     term-⟦ if `true then V else y ⟧
   ≡⟨ refl ⟩
     (if-cont ∘ (pair-f term-⟦ `true ⟧ (pair-f term-⟦ V ⟧ term-⟦ y ⟧)) )
-  ≡⟨ cont-fun-extensionality (λ ⊥ → if-true {⊥} {A} {V} {y}) ⟩
+  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
     term-⟦ V ⟧
   ∎
 soundness {A} {V = V} (β-if₂ {x = x}) =
@@ -123,7 +124,7 @@ soundness {A} {V = V} (β-if₂ {x = x}) =
     term-⟦ if `false then x else V ⟧
   ≡⟨ refl ⟩
     if-cont ∘ (pair-f term-⟦ `false ⟧ (pair-f term-⟦ x ⟧ term-⟦ V ⟧))
-  ≡⟨ cont-fun-extensionality (λ ⊥ → if-false {⊥} {A} {V} {x}) ⟩
+  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
     term-⟦ V ⟧
   ∎
 soundness {A} (β-μ {N = N}) =
@@ -158,59 +159,9 @@ soundness β-is-zero₁ =
   ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
     term-⟦ `true ⟧
   ∎
-soundness (β-is-zero₂ {M = `zero} x) =
+soundness (β-is-zero₂ {M = M} x) =
   begin
-    term-⟦ `is-zero (`suc `zero) ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ `zero ⟧)
-  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
-    term-⟦ `false ⟧
-  ∎
-soundness (β-is-zero₂ {M = `suc M} x) =
-   begin
-     term-⟦ `is-zero (`suc (`suc M)) ⟧
-   ≡⟨ refl ⟩
-     (z⊥ ∘ (s⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)) )
-   ≡⟨ cont-fun-extensionality (λ ⊥ → {!!} ) ⟩
-     term-⟦ `false ⟧
-    ∎
-
-∘-assoc : {D₀ D₁ D₂ D₃ : domain} {f : cont-fun D₂ D₃} {g : cont-fun D₁ D₂} {h : cont-fun D₀ D₁} → (f ∘ g) ∘ h ≡ f ∘ (g ∘ h)
-∘-assoc {f} {g} {h} = cont-fun-extensionality λ ⊥ → refl
-
-lemma-blah-proof : ∀ {M} → Value M → z⊥ ∘ (term-⟦ `suc M ⟧) ≡ term-⟦ `false ⟧
-
-
-z⊥∘s⊥-inj-n : {n : ℕ} → g (mon (z⊥ ∘ s⊥)) (inj n) ≡ inj false
-z⊥∘s⊥-inj-n = refl
-
-
-
-lemma-blah-proof {M} V-zero = 
-  begin
-    z⊥ ∘ term-⟦ `suc M ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ M ⟧)
-  ≡⟨ Eq.sym (∘-assoc {f = z⊥} {g = s⊥} {h = term-⟦ M ⟧}) ⟩
-    (z⊥ ∘ s⊥) ∘ term-⟦ M ⟧
-  ≡⟨ cont-fun-extensionality (λ ⊥ → refl) ⟩
-    term-⟦ `false ⟧
-  ∎
-lemma-blah-proof {.(`suc V)} (V-suc {V = V} val-M) =
-  begin
-    z⊥ ∘ term-⟦ `suc (`suc V) ⟧
-  ≡⟨ refl ⟩
-    z⊥ ∘ (s⊥ ∘ term-⟦ `suc V ⟧)
-  ≡⟨ Eq.sym (∘-assoc { f = z⊥} { s⊥ } { term-⟦ `suc V ⟧ }) ⟩
-    (z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧
-  ≡⟨ cont-fun-extensionality (λ ⊥ →
-     begin
-       g (mon ((z⊥ ∘ s⊥) ∘ term-⟦ `suc V ⟧)) ⊥
-     ≡⟨ {!z⊥∘s⊥-inj-n { g (mon term-⟦ `suc V ⟧) ⊥ }!} ⟩
-       inj false
-     ≡⟨ refl ⟩
-       g (mon term-⟦ `false ⟧) ⊥
-     ∎)
-   ⟩
+    term-⟦ `is-zero (`suc M) ⟧
+  ≡⟨ cont-fun-extensionality (λ ⊥ → z⊥∘s⊥-soundness-lemma M x {⊥})⟩
     term-⟦ `false ⟧
   ∎
