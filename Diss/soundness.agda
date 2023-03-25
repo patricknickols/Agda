@@ -55,18 +55,8 @@ soundness (ξ-·₁ {L = L} {L′} {M} L→L′) =
   ≡⟨ refl ⟩
     term-⟦ L′ · M ⟧
   ∎
-soundness (ξ-·₂ {V = V} {M} {M′} v M→M′) =
-  begin
-    term-⟦ V · M ⟧
-  ≡⟨ refl ⟩
-    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M ⟧
-  ≡⟨ cong (_∘_ ev-cont) (cong (pair-f term-⟦ V ⟧) (soundness M→M′)) ⟩
-    ev-cont ∘ pair-f term-⟦ V ⟧ term-⟦ M′ ⟧
-  ≡⟨ refl ⟩
-    term-⟦ V · M′ ⟧
-  ∎
 
-soundness (β-ƛ {A = A} {N = N} {W} v) =
+soundness (β-ƛ {A = A} {N = N} {W}) =
   begin
     term-⟦ (ƛ N) · W ⟧
   ≡⟨ refl ⟩

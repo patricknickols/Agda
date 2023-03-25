@@ -195,13 +195,7 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → L —→ L′
     → L · M —→ L′ · M
 
-  ξ-·₂ : ∀ {Γ A B} {V : Γ ⊢ A ⇒ B} {M M′ : Γ ⊢ A} 
-    → Value V
-    → M —→ M′
-    → V · M —→ V · M′
-
   β-ƛ : ∀ {Γ A B} {N : Γ , A ⊢ B} {W : Γ ⊢ A}
-    → Value W
     → (ƛ N) · W —→ N [ W ]
 
   ξ-suc : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
@@ -257,10 +251,8 @@ progress : ∀ {A} → (M : ∅ ⊢ A) → Progress M
 progress (ƛ M) = done V-ƛ
 
 progress (L · M)  with progress L
-...    | step L—→L′               = step (ξ-·₁ L—→L′)
-...    | done V-ƛ with progress M 
-...        | step M—→M′           = step (ξ-·₂ V-ƛ M—→M′)
-...        | done VM              = step (β-ƛ VM)
+...    | step L—→L′  = step (ξ-·₁ L—→L′)
+...    | done V-ƛ    = step β-ƛ
 
 progress `zero = done V-zero
 
@@ -274,8 +266,8 @@ progress (`suc M) with progress M
 ...    | done VM    = done (V-suc VM)
 
 progress (`pred M) with progress M
-...    | step M—→M′ = step (ξ-pred M—→M′)
-...    | done V-zero = step β-pred₁
+...    | step M—→M′      = step (ξ-pred M—→M′)
+...    | done V-zero     = step β-pred₁
 ...    | done (V-suc VM) = step (β-pred₂ VM)
 
 
