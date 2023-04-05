@@ -5,6 +5,7 @@ open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
 open import Data.Nat using (ℕ)
 open import DomainTheory.BasicObjects.posets-etc
+open import DomainTheory.BasicObjects.theorems
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
 
 open poset
@@ -104,3 +105,5 @@ lub-preserve (ev-cont {D} {E}) c =
   ≡⟨ refl ⟩
     ⊔ev[fₙ,dₙ]
     ∎
+
+

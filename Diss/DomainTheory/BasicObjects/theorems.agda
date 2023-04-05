@@ -155,14 +155,23 @@ fₖₖ-chain P double-index-fun = record { g = λ x → (g double-index-fun) (x
                                       }
                                      
 
-diagonalising-lemma-1 : (P : domain) → (double-index-fun : monotone-fun nats²-pos (pos P))
-  → ⊔ ((chain-complete P) (chain-⊔fₙₖ-with-n-fixed P double-index-fun)) ≡ ⊔ ((chain-complete P) (fₖₖ-chain P double-index-fun))
+diagonalising-lemma-1 : (P : domain)
+  → (double-index-fun : monotone-fun nats²-pos (pos P))
+  → ⊔ ((chain-complete P) (chain-⊔fₙₖ-with-n-fixed P double-index-fun))
+    ≡
+    ⊔ ((chain-complete P) (fₖₖ-chain P double-index-fun))
 
-diagonalising-lemma-2 : (P : domain) → (double-index-fun : monotone-fun nats²-pos (pos P))
-  → ⊔ ((chain-complete P) (chain-⊔fₖₙ-with-n-fixed P double-index-fun)) ≡ ⊔ ((chain-complete P) (fₖₖ-chain P double-index-fun))
+diagonalising-lemma-2 : (P : domain)
+  → (double-index-fun : monotone-fun nats²-pos (pos P))
+  → ⊔ ((chain-complete P) (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
+    ≡
+    ⊔ ((chain-complete P) (fₖₖ-chain P double-index-fun))
 
-diagonalising-lemma : (P : domain) → (double-index-fun : monotone-fun nats²-pos (pos P))
-  → ⊔ ((chain-complete P) (chain-⊔fₙₖ-with-n-fixed P double-index-fun)) ≡ ⊔ ((chain-complete P) (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
+diagonalising-lemma : (P : domain)
+  → (double-index-fun : monotone-fun nats²-pos (pos P))
+  → ⊔ ((chain-complete P) (chain-⊔fₙₖ-with-n-fixed P double-index-fun))
+    ≡
+    ⊔ ((chain-complete P) (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
 
 swap-≡ : {A : Set} {a b : A} → a ≡ b → b ≡ a
 swap-≡ Eq.refl = Eq.refl
@@ -182,17 +191,27 @@ diagonalising-lemma-1 P double-index-fun = let ⋃ = chain-complete P in
       (λ {n} → lub2
         (⋃ (chain-fₘₙ-with-m-fixed P double-index-fun n))
         (λ {n₁} → dₘₙ≤⊔dₖₖ {n} {n₁} P double-index-fun)))
-    (lub2 (⋃ (fₖₖ-chain P double-index-fun)) λ {n} → transitive (pos P) (lub1 (⋃ (chain-fₘₙ-with-m-fixed P double-index-fun n)) {n}) (lub1 (⋃ (chain-⊔fₙₖ-with-n-fixed P double-index-fun)) {n}))
+    (lub2
+      (⋃ (fₖₖ-chain P double-index-fun))
+      λ {n} → transitive (pos P)
+                (lub1 (⋃ (chain-fₘₙ-with-m-fixed P double-index-fun n)) {n})
+                (lub1 (⋃ (chain-⊔fₙₖ-with-n-fixed P double-index-fun)) {n}))
 
 
 diagonalising-lemma-2 P double-index-fun = let ⋃ = chain-complete P in
   antisymmetric (pos P)
-   (lub2
-    (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
-    (λ {m} → lub2 (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun m)) (λ {n} → dₘₙ≤⊔dₖₖ P double-index-fun)))
-   (lub2
-    (⋃ (fₖₖ-chain P double-index-fun))
-    (λ {n} → transitive (pos P) (lub1 (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun n)) {n}) (lub1 (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun)))))
+    (lub2
+      (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
+      (λ {m} →
+        lub2
+          (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun m))
+          (λ {n} → dₘₙ≤⊔dₖₖ P double-index-fun)))
+    (lub2
+      (⋃ (fₖₖ-chain P double-index-fun))
+      (λ {n} →
+        transitive (pos P)
+          (lub1 (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun n)) {n})
+          (lub1 (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun)))))
 
 diagonalising-lemma P double-index-fun = Eq.trans (diagonalising-lemma-1 P double-index-fun) (swap-≡ (diagonalising-lemma-2 P double-index-fun))
 
@@ -380,7 +399,7 @@ function-domain-chain-complete P P′ c = let ⋃ = chain-complete P′ in recor
 function-domain-⊥-function : (P P′ : domain) → cont-fun P P′
 function-domain-⊥-func-mon : (P P′ : domain) → monotone-fun (pos P) (pos P′)
 function-domain-⊥-func-mon P P′ = record { g = λ x → ⊥ (bottom P′)
-                                         ; mon = λ a≤a′ → ≡→⊑ (pos P′) Eq.refl
+                                         ; mon = λ a≤a′ → reflexive (pos P′)
                                          }
 
 
@@ -388,7 +407,7 @@ function-domain-⊥-function P P′ = record { mon = function-domain-⊥-func-mo
                                          ; lub-preserve = λ c → antisymmetric (pos P′)
                                            (⊥-is-bottom (bottom P′))
                                            (lub2 (chain-complete P′ (chain-map c (function-domain-⊥-func-mon P P′)))
-                                             (λ {n} → ≡→⊑ (pos P′) Eq.refl))
+                                             (λ {n} → reflexive (pos P′)))
                                          }
                                          
 function-domain P  P′ = record
