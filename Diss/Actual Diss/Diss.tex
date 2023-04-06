@@ -1,6 +1,6 @@
 % Template for a Computer Science Tripos Part II project dissertation
 \documentclass[12pt,a4paper,twoside,openright]{report}
-\include{agda_aux}
+
 \usepackage{My_style}
 \usepackage{dirtree}
 \usepackage{minted}
@@ -16,7 +16,8 @@
 \usepackage{stmaryrd}
 \usepackage{blindtext}
 \usepackage{epigraph}
-
+\usepackage{amssymb}
+\include{agda_aux}
 %\raggedbottom                           % try to avoid widows and orphans
 \sloppy
 \clubpenalty1000%
@@ -192,7 +193,7 @@ PCF is Turing complete. This is a well-known result, and its proof is expressed 
 
 A perhaps surprising result is that the fixpoint operator (which allows unbounded recursion) is not sufficient on its own: in the simply typed lambda calculus augmented with only the Y combinator, everything, in particular whether a program terminates, is decidable. Details can be found in Statman's (CITE). 
 \subsection{Relation to other languages}
-A natural question to ask, and a common refrain from those who work on more applied subjects is something along the lines of ``What's the point? Are you really proving anything if you only deal with toy languages?". However these concerns can be addressed in two ways. Firstly, it should be noted that progress is incremental: it was easier to give an operational semantics for languages that closely model the typed lambda calculus than for C. 
+A natural question to ask, and a common refrain from those who work on more applied subjects is something along the lines of ``What's the point? Are you really proving anything if you only deal with toy languages?". However these concerns can be addressed in two ways. Firstly, it should be noted that progress is incremental: it was easier to give an operational semantics for languages that closely model the typed lambda calculus than for C, but seeing an operational semantics for the typed lambda calculus makes providing one for C much more feasible. 
 
 Secondly, and of some importance for the PCF-interested reader: PCF was the inspiration behind ML and thus OCaml, F\# etc. In particular, Milner developed ML for a theorem-proving system based on LCF. Proving things about PCF can thus be viewed as foundational work for proving things about languages like OCaml, Haskell and F\#.
 \section{Agda}
@@ -209,7 +210,7 @@ When exploring the Curry-Howard correspondence, there are two ways of trying to 
 
 Informally, dependent types extend a type system by allowing types to depend not only on other types (as e.g. a function from $A$ to $B$ depends on $A$ and $B$), but also on values. 
 
-Formally, there are two constructs we wish to consider. The dependent product\footnote{The terminology here is exceedingly confusing and inconsistent. There are good arguments for calling either of the constructs we consider a dependent product. One can only hope the field crystallises around one of the two opposing terminologies. This object is also called a dependent function, as it is a generalisation of a function.} is a function from a type $A$ to a type that depends on the value of the input. Agda's syntax, which reflects this is: $(a : A) \to B(a)$, where $B(a)$ is a type. $B$ is not therefore a type, but a function from $A \to U$ where $U$ is a ``universe" of types\footnote{The pedantic Russell-paradox fan may be disappointed by this dissertation. I will try to avoid all mention of Grothendieck universes, save where completely necessary, but note that this is a choice, and these considerations do matter. They are just not the main point I am aiming at here}. That is, for every $a \in A$, $B(a)$ is a type. This family of types $B$ may be called a dependent type\footnote{Again, terminology is inconsistent. People may instead call $B a$ a dependent type}. The notation people use more widely (outside of Agda) for this function from $A$ to $B(a)$ is:
+Formally, there are two constructs we wish to consider. The dependent product\footnote{The terminology here is exceedingly confusing and inconsistent. There are good arguments for calling either of the constructs we consider a dependent product. One can only hope the field crystallises around one of the two opposing terminologies. This object is also called a dependent function, as it is a generalisation of a function.} is a function from a type $A$ to a type that depends on the value of the input. Agda's syntax, which reflects this is: $(a : A) \to B(a)$, where $B(a)$ is a type. $B$ is not therefore a type, but a function from $A \to U$ where $U$ is a ``universe" of types\footnote{The pedantic Russell-paradox fan may be disappointed by this dissertation. I will try to avoid all mention of Grothendieck universes, save where completely necessary, but note that this is a choice, and these considerations do matter. They are just not the main point I am aiming at here}. That is, for every $a \in A$, $B(a)$ is a type. This family of types $B$ may be called a dependent type\footnote{Again, terminology is inconsistent. People may instead call $B(a)$ a dependent type}. The notation people use more widely (outside of Agda) for this function from $A$ to $B(a)$ is:
 \[
 \prod_{a: A} B(a).
 \]
@@ -581,16 +582,118 @@ Basically copy what Ted and Wadler said I guess?
 \subsection{Operational Semantics and Progress (and preservation for free)}
 \subsubsection{Operational Semantics}
 We define a small-step operational semantics. Note that this is different from the big-step operational semantics presented in the lecture notes, but I claim my definition is equivalent. There are very few surprises, other than the changing of \texttt{pred(zero)} from the course, and everything more or less works nicely, apart from having to deal with substitution for the lambdas. (maybe present a proof that the same evaluation rules hold?). 
+
+We evaluate the left side of applications first:
+\begin{minted}{agda}
+data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
+
+  ξ-·₁ : ∀ {Γ A B} {L L′ : Γ ⊢ A ⇒ B} {M : Γ ⊢ A}
+    → L —→ L′
+    → L · M —→ L′ · M
+\end{minted}
+We evaluate arguments to \texttt{pred}, \texttt{suc}, if-clauses and \texttt{is-zero} where possible:
+\begin{minted}{agda}
+  ξ-suc : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
+    → M —→ M′
+    → `suc M —→ `suc M′
+
+  ξ-pred : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
+    → M —→ M′
+    → `pred M —→ `pred M′
+  
+  ξ-if : ∀ {Γ A} {B B′ : Γ ⊢ `bool} {x y : Γ ⊢ A}
+    → B —→ B′
+    → if B then x else y —→ if B′ then x else y
+
+  ξ-is-zero : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
+    → M —→ M′
+    → `is-zero M —→ `is-zero M′
+\end{minted}
+We have the expected $\beta$-reductions for if-clauses:
+\begin{minted}{agda}
+  β-if₁ : ∀ {Γ A} {x y : Γ ⊢ A}
+    → if `true then x else y —→ x
+
+  β-if₂ : ∀ {Γ A} {x y : Γ ⊢ A}
+    → if `false then x else y —→ y
+\end{minted}
+Again, we have normal reductions for \texttt{pred} and \texttt{is-zero}. These $\beta$ rules only apply when the relevant other terms are fully evaluated. They thus require a proof of the relevant term being a value to be used. We do not need a reduction rule for \texttt{`suc M} where \texttt{M} is a value. This is because these are normal forms; there is no other \texttt{Value} representation of 1, other than \texttt{`suc `zero}. Note here also that we include \texttt{β-pred₁}: this is the departure from the course and Scott's version of PCF. 
+\begin{minted}{agda}
+  β-pred₁ : ∀ {Γ : Context}
+    → `pred (`zero) —→ `zero {Γ}
+
+  β-pred₂ : ∀ {Γ : Context} {M : Γ ⊢ `ℕ}
+    → Value M
+    → `pred (`suc M) —→ M
+
+  β-is-zero₁ : ∀ {Γ}
+    → `is-zero `zero —→ `true {Γ}
+
+  β-is-zero₂ : ∀ {Γ} {M : Γ ⊢ `ℕ}
+    → Value M
+    → `is-zero (`suc M) —→ `false 
+\end{minted}
+Our most interesting two reduction rules are lambdas and the fix-operator. 
+
+We say that $\lambda N \cdot W$ steps to $N [W]$ where $[W]$\footnote{This is a separate function, that requires some care to define correctly. Wadler covers the details in CITE.} means that $W$ is substituted for the innermost de Bruijn index (i.e. this is the de Bruijn way of saying $(\lambda x. N) W \to N[W/x]$). This is therefore call-by-name evaluation, where the argument is not reduced before substitution. This is crucial for allowing the fix point operator to work correctly (why?). 
+\begin{minted}{agda}
+  β-ƛ : ∀ {Γ A B} {N : Γ , A ⊢ B} {W : Γ ⊢ A}
+    → (ƛ N) · W —→ N [ W ]
+\end{minted}
+Additionally, since we are using small step semantics, the definition of fix of an endofunction (note the type signature!) is quite simple:
+\begin{minted}{agda}
+  β-μ : ∀ {Γ A} {N : Γ ⊢ A ⇒ A}
+    → μ N —→ N · (μ N)
+\end{minted}
 \subsection{Denotational Semantics}
-We have two denotation functions, namely those which map contexts (in PCF) to domains, and those which map terms of type $\tau$ under assumptions $\Gamma$ to continuous functions from $\llbracket \Gamma \rrbracket$ to $\llbracket \tau \rrbracket$. 
+We have three denotation functions, namely those which map a type (in PCF) to a domain, a context (in PCF) to a domain, and those which map terms of type $\tau$ under assumptions $\Gamma$ to continuous functions from $\llbracket \Gamma \rrbracket$ to $\llbracket \tau \rrbracket$. The denotation of ground types is what you would expect, namely the flat domain. We use the underlying booleans and naturals from Agda and augment them with the flat ordering and extra bottom element. 
 
-We then turn to the denotations of well-typed terms (these are the only terms due to intrinsic typing). While the course separates the denotations from the proofs that these are valid continuous functions, Agda saves us some time. Since we define denotations as continuous functions, Agda will only type check if we supply something that is proven continuous.
+For the denotation of a function-space, we take a function domain. That a function-space between two domains can be ordered to form a domain is a useful result (Where is this proved in the course?), proved in the definition of \texttt{function-domain}. Because this typechecks, we know that \texttt{function-domain} is a valid domain (due to the type signature of the function), and thus that it has a least element, and a partial order, and is chain-complete (indeed these are all provided explicitly in CITE). 
+\begin{minted}{agda}
+⟦_⟧ : Type → domain
+⟦ `ℕ ⟧ = ℕ⊥
+⟦ `bool ⟧ = 𝔹⊥
+⟦ τ ⇒ τ′ ⟧ = function-domain ⟦ τ ⟧ ⟦ τ′ ⟧
+\end{minted}
+We then define contexts as the depedent product domain. INSERT STUFF ABOUT CARTESIAN N-ary products vs binary products iterated?
+\begin{minted}{agda}
+context-⟦_⟧ : Context → domain
+context-⟦ Γ ⟧ = domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
+\end{minted}
+We then turn to the denotations of well-typed terms (these are the only terms due to intrinsic typing). While the course separates the denotations from the proofs that these are valid continuous functions, Agda saves us some time. Since we define denotations as continuous functions, Agda will only type check if we supply something that is proven continuous. Our type signature is:
+\begin{minted}{agda}
+⟦_⊢′_⟧ : ∀ {A} → (Γ : Context) → (M : Γ ⊢ A) → cont-fun context-⟦ Γ ⟧ ⟦ A ⟧
+\end{minted}
 
-Since our denotation is compositional (i.e. the denotation of an expression is a composition of the denotations of the subexpressions) a key lemma that we will use for all non-normal forms, is that the composition of two continuous functions is itself continuous.
+Since our denotation is compositional (i.e. the denotation of an expression is a composition of the denotations of the subexpressions) a key lemma that we will use for all non-normal forms, is that the composition of two continuous functions is itself continuous. This has a somewhat lengthy proof in Agda (as we need to be explicit about not only the function, but the proof that it is continuous) but is not particularly troublesome. We present here its type signature. The curious reader is invited to look closer at CITE.
+\begin{minted}{agda}
+_∘_ : ∀ {D₁ D₂ D₃} → cont-fun D₂ D₃ → cont-fun D₁ D₂ → cont-fun D₁ D₃
+\end{minted}
 
-We then show constant functions are continuous, and thus the denotations of zero, true and false are dealt with. We then show that extending a partial function to a flat domain in the obvious way (WHAT DOES THIS MEAN) gives us a continuous function. This takes care of the test-for-zero, the successor function, and the predecessor function, when combined with the recursing on their arguments. 
-
-This leaves us with exactly 5 cases: we show application is a continuous function in \texttt{ev-cont.agda}, we show the \texttt{if then else} function is continuous in \texttt{if-cont.agda}, we show the fixpoint operator is continuous in \texttt{fix-cont.agda} and we show that currying gives a continuous function in \texttt{cur-cont.agda}. Our one remaining case is the case of variables, but the denotation of a variable from a context containing it is just a projection function. 
+We then show constant functions are continuous\footnote{We call the lemma that this produces a continuous function \texttt{constant-fun}.}, and thus the denotations of zero, true and false are dealt with. 
+\begin{minted}{agda}
+⟦ Γ ⊢′ `zero ⟧ = constant-fun {Γ} ℕ 0
+⟦ Γ ⊢′ `true ⟧ = constant-fun {Γ} Bool true
+⟦ Γ ⊢′ `false ⟧ = constant-fun {Γ} Bool false
+\end{minted}
+We then show that extending a partial function to a flat domain in the obvious way (WHAT DOES THIS MEAN) gives us a continuous function. This takes care of the test-for-zero, the successor function, and the predecessor function, when combined with the recursing on their arguments. 
+\begin{minted}{agda}
+⟦ Γ ⊢′ `is-zero N ⟧ = z⊥ ∘ ⟦ Γ ⊢′ N ⟧
+⟦ Γ ⊢′ `suc N ⟧ = s⊥ ∘ ⟦ Γ ⊢′ N ⟧
+⟦ Γ ⊢′ `pred N ⟧ = p⊥ ∘ ⟦ Γ ⊢′ N ⟧
+\end{minted}
+This leaves us with exactly 5 cases: we show application is a continuous function in \texttt{ev-cont.agda}, we show the \texttt{if then else} function is continuous in \texttt{if-cont.agda}, we show the fixpoint operator is continuous in \texttt{fix-cont.agda} and we show that currying gives a continuous function in \texttt{cur-cont.agda}\footnote{For technical reasons, we use a helpful lemma here that essentially helps us convince Agda that our proof is valid. It takes a continuous function from a given context, and returns a continuous function from the product of the head of its context and its last element. The reason this matters is due to the subtle distinction between iterated binary products and general $n$-ary products.}.
+\begin{minted}{agda}
+⟦ Γ ⊢′ M₁ · M₂ ⟧ = ev-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ ⟦ Γ ⊢′ M₂ ⟧) 
+⟦ Γ ⊢′ if M₁ then M₂ else M₃ ⟧ = if-cont ∘ (pair-f ⟦ Γ ⊢′ M₁ ⟧ (pair-f ⟦ Γ ⊢′ M₂ ⟧ ⟦ Γ ⊢′ M₃ ⟧))
+⟦ Γ ⊢′ μ M ⟧ = tarski-continuous ∘ ⟦ Γ ⊢′ M ⟧ 
+⟦ Γ ⊢′ ƛ_ {A = A} {B} M ⟧ = cur-cont (helpful-lemma-blah {Γ} {A} {B} ⟦ Γ , A ⊢′ M ⟧)
+\end{minted}
+Our one remaining case is the case of variables, but the denotation of a variable from a context containing it is just a projection function. 
+\begin{minted}{agda}
+⟦ Γ ⊢′ ` x ⟧ = project-x Γ x
+\end{minted}
+We use the intermediary function \texttt{project-x} which does a projection of a domain from a dependent product of domains, using a lemma that a certain equality holds. Again the details are not particularly interesting: these are the kinds of troubles introduced artificially. The lemma here is not something one would necessarily write on paper, but just a way of propogating information from the author to Agda's type checker. 
 \subsection{Soundness}
 As with most things to do with programming languages, the majority of the proof of soundness is an uninteresting and straightforward use of induction. The cases for most terms look like:
 \begin{minted}{agda}
