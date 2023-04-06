@@ -1,0 +1,133 @@
+\documentclass{article}
+\usepackage{my_style}
+\usepackage{layout}
+\usepackage{rotating}
+\usepackage{hyperref}
+\begin{document}
+\title{Formalising PCF and its Denotational Semantics in Agda \\
+\large Computer Science Tripos Part II Project Proposal}
+\section{Introduction}
+When trying to be precise and prove properties about a program, inevitably one needs to carefully define the semantic meaning of this program. Two main approaches are common: operational semantics, in which one defines how code is evaluated via a series of transitions, or denotational semantics, in which one constructs a mathematical object that models the program. (Other approaches exist, such as axiomatic semantics.)
+
+Denotational semantics \cite{SemDomsAndDenSem} is a field largely initiated and developed by Dana Scott and PCF is a small, typed, functional language based on his work that was introduced by Gordon Plotkin. Plotkin and Scott also developed the mathematical underpinning for denotational semantics: domain theory \cite{DomainTheory}. 
+
+My project aims to formalise parts of domain theory and the denotational semantics of PCF in the depdendently-typed proof assistant Agda. Denotational semantics allow us to be sure that the computational behaviour of a language is what we want it to be, while formalising a proof allows us to be sure that the proof really is sound, so combining them gives us a way to be very confident that our computational behaviour and intended behaviour align for a given language (in my case PCF). 
+
+\section{Starting Point}
+I have spent a small fraction of my summer vacation gaining some familiarity with Agda and its interactive Emacs mode. To do this, I have been doing some of the work from Programming Language Foundations in Agda\footnote{The online text can be found at \url{https://plfa.github.io/}} \cite{PLFA}. I have completed about two thirds of the first (of three) parts, covering proving basic theorems about Peano arithmetic and simple sets and their operations\footnote{My work can be seen at \url{https://github.com/patricknickols/Agda/tree/main/plfa/part1}}.  
+
+\section{Substance}
+My project is: at a minimum to formalise some of the definitions and results of the Cambridge Denotational Semantics course \cite{DenSem_lecture_notes}. This includes formalising definitions of mathematical objects from domain theory (posets, chains, monotone and continuous functions), as well as proofs of properties about them (e.g. Tarski's fixed point theorem). I also hope to identify and overcome anticipated challenges arising from translating classical mathematical theory to a dependently typed setting -- for example, some classical proofs may rely on the law of excluded middle.
+
+I will also encode PCF in Agda, and encode its denotational semantics, with a proof that every term in PCF has a corresponding denotation in my encoded semantics. 
+
+Formalising things is not straightforward, and often some paths are surprisingly difficult and others offer less resistance. For instance, chains (increasing infinite sequences of poset elements) may have several distinct type-theoretic representations (streams, higher-order-functions, etc.) and it is not a priori obvious which is most appropriate. Because of this, the exact results I choose to focus on are not fully determined yet, but I expect the above to be possible. Some extensions that are strictly tied to this material would be a more comprehensive formalisation of the entire course, with details of more advanced proofs, such as formalising Scott induction, or proving adequacy using logical relations. 
+
+In addition, it is always possible (but quite unlikely) that niche results are indeed not true, or rely on hidden assumptions, that only become uncovered after deeper formalisation. I don't expect this to be true, as the material is fairly well-studied, but it is worth highlighting this risk. I would consider it a success to find any such ``bugs" in proofs, even if that means I cannot complete the formalisation, but I find this a very unlikely scenario. 
+
+One additional extension would be to investigate the same domain theory material from a more abstract category-theoretic perspective, either on its own merit or as part of the formalisation, and potentially commenting on extra results that may fall out from this more powerful machinery. 
+
+\section{Success Criteria}
+My main goals are to :
+\begin{itemize}
+\item
+Formalise the main definitions of domain theory: Posets, chains, least upper bounds, fixed points, monotone and continuous functions. 
+\item
+Formalised proofs of properties about these: 
+\begin{itemize}
+\item
+Lambek's Lemma.
+\item
+Tarski's fixed point theorem
+\item
+The continuity of the fixed point operator. 
+\end{itemize}
+\item
+Encode PCF in Agda:
+\begin{itemize}
+\item
+Have its denotational semantics such that every term in the encoded PCF has a corresponding denotation
+\item
+Progress theorem
+\item
+Preservation theorem
+\item
+Soundness theorem: evaluation preserves meaning.
+\end{itemize}
+\end{itemize}
+Additional goals to aim for include:
+\begin{itemize}
+\item
+A more complete and comprehensive covering of the material from the denotational semantics course (including proofs that may be ill-suited to formalisation), such that for for every (non-trivial) slide, definition and proved theorem, I have either the corresponding structure in Agda, or at least a reason why this is impractical/requires extra work or assumptions. Extensions in course that are not in my main criteria include
+\begin{itemize}
+\item Scott induction
+\item Compositionality of my implemented denotational semantics
+\item Adequacy of my implemented denotational semantics
+\end{itemize}
+\item
+Going beyond the course: either proving additional outside-course-scope theorems about domains or encoding a more complex variant of PCF.
+\item
+A categorical perspective on the same material. 
+\end{itemize}
+\section{Proposed Timetable}
+My proposed timetable is below. My main overaching time goal is to have the majority of Agda work done by the time the Christmas vacation ends. However, this is potentially ambitious and is done with the aim of leaving slack should I fall behind. 
+\begin{itemize}
+\item 17/10 -- 30/10
+
+Gain familiarity with parts of domain theory. Milestone: Define posets (in Agda).
+\item 31/10 -- 13/11
+
+Start proving things in Agda. Milestone: Define chains and least upper bounds, prove a property about them. 
+\item 14/11 -- 27/11
+
+Continue with domain theory and unit of assessment work. Milestone: Define monotone and continuous functions and prove Tarski's fixed point theorem.
+\item 28/11 -- 11/12
+
+Slack/holiday. End of term unit of assessment + vacation + more domain theory. Milestone: All domain theory success criteria finished by then.
+\item 12/12 -- 25/12
+
+Encode PCF in Agda. Milestone: Have working PCF implementation.
+\item 26/12 -- 8/1
+
+Slack/Holiday. Milestone: None.
+\item 9/1 -- 22/1
+
+Further PCF work. Milestone: Have proofs of properties about PCF implementation.
+\item 23/1 -- 5/2
+
+Extensions/finalising work I am behind on. Milestone: None. 
+\item 6/2 -- 19/2
+
+Start Dissertation writing. Milestone: A sketch document of my dissertation.
+\item 20/2 -- 5/3
+
+Further dissertation work (and maybe some further additional goals work). Milestone: Dissertation draft (minus evaluation).
+\item 6/3 -- 19/3
+
+Dissertation evaluation work. Milestone: Dissertation draft. 
+\item 20/3 -- 2/4
+
+Explicit slack time.
+\item 3/4 -- 16/4
+
+Continue with short feedback loop with supervisor and apply finishing touches/redo any problematic bits.
+\item 17/4 -- 30/4
+
+Explicit slack time. 
+\item 1/5 -- 12/5
+
+Finish. 
+\end{itemize}
+\section{Resources Required}
+I will be using my laptop, which has an i5-8250U CPU clocked at 1.6 GHz, as well as 8GB of RAM and runs Windows 11 as its OS (though can use Ubuntu via the Windows Subsystem for Linux). I'll be using Emacs for development and Git for both version control and backing up code in case of damage to my laptop. I accept full responsibility for any risks associated with the use of my own machine and in the case of software and or hardware failures will have a replacement available. 
+\begin{thebibliography}{9}
+\bibitem{PLFA}
+Philip Wadler, Wen Kokke, and Jeremy G. Siek. (2022) \emph{Programming Language Foundations in Agda}.
+\bibitem{DenSem_lecture_notes}
+Marcelo Fiore, Andy Pitts. (2022) \emph{Lecture Notes on Denotational Semantics}.
+\bibitem{DomainTheory}
+Samson Abramsky and Achim Jung. (1995) \emph{Domain Theory}.
+\bibitem{SemDomsAndDenSem}
+Carl Gunter, Peter Mosses, and Dana Scott. (1989) \emph{Semantic Domains and Denotational Semantics}. 
+\end{thebibliography}
+\end{document}
