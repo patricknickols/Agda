@@ -1,12 +1,14 @@
 module DomainTheory.ContinuousFunctions.fix-cont where
 
 open import DomainTheory.BasicObjects.posets-etc
+open import DomainTheory.BasicObjects.theorems
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
 open Eq using (_≡_; cong)
 
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
+open import misc
 
 open poset
 open domain
@@ -36,8 +38,6 @@ tarski-mon P = record { g =  λ (cont-fun : cont-fun P P) → d (lfp1 (tarski-fi
                       ; mon = λ {f} {f′} f⊑f′ → lfp2 (tarski-fix P f) (fix-f′-is-pre-fixed P f f′ f⊑f′)
                       }
 
-unique-lub : ∀ (P : poset) → (c : chain P) → (a b : lub c) → ⊔ a ≡ ⊔ b
-unique-lub P c a b = antisymmetric P (lub2 a (lub1 b)) (lub2 b (lub1 a))
 
 fix⋃fₙ⊑⋃fixfₙ : (P : domain) → (c : chain (function-pos P P)) → (d : chain (function-pos P P))
   → R (pos P)
@@ -114,25 +114,6 @@ m,n→fₘfixfₙ P c = record { g = λ m,n
 
 fix⋃fₙ⊑⋃fixfₙ P c d = lfp2 (tarski-fix P (function-domain-⊔ P P d)) (⋃fixfₙ-is-pre-fix P c d)
 
-
-lfp-is-fixed : ∀ {D : domain} {f : cont-fun D D} → d (lfp1 (tarski-fix D f)) ≡ g (mon f) (d (lfp1 (tarski-fix D f)))
-
-lfp-is-fixed {D} {f} =
-  antisymmetric (pos D)
-    (lfp2 ((tarski-fix D f)) ((((mon (mon f)) (pre-fix (lfp1 (tarski-fix D f)))))))
-    (pre-fix (lfp1 (tarski-fix D f)))
-
-
-remark-237 : (P : domain) → (P′ : domain) → (c : chain (pos P)) → (f : monotone-fun (pos P) (pos P′))
-  → (∀ (d : chain (pos P)) → (R (pos P′)) ((g f) (⊔ (chain-complete P d))) (⊔ (chain-complete P′ (chain-map d f))))
-  → cont-fun P P′
-
-remark-237 P P′ c f f⋃dₙ⊑⋃fdₙ = record { mon = f
-                                       ; lub-preserve = λ c →
-                                           antisymmetric (pos P′)
-                                             (f⋃dₙ⊑⋃fdₙ c)
-                                             (lub2 (chain-complete P′ (chain-map c f)) (λ {n} → mon f (lub1 (chain-complete P c))))
-                                       }
 
 tarski-lub-preserve P c = lub-preserve (remark-237 ((function-domain P P)) P c (tarski-mon P) (fix⋃fₙ⊑⋃fixfₙ P c)) c
 

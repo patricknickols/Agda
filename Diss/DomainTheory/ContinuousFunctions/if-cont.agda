@@ -5,10 +5,12 @@ open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
 open import Data.Nat using (ℕ; _≤_)
 open import Data.Bool using (Bool; true; false)
-open import DomainTheory.BasicObjects.posets-etc
-open import misc using (𝔹⊥; pair; pair-η; pair-equality)
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
+
+open import DomainTheory.BasicObjects.posets-etc
+open import DomainTheory.BasicObjects.theorems
+open import misc
 
 open poset
 open domain

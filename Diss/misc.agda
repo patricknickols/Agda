@@ -3,7 +3,7 @@ module misc where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
-open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; z≤n; s≤s)
+open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; z≤n; s≤s; _<_)
 open import Data.Bool using (Bool; true; false)
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
@@ -68,3 +68,14 @@ a≡b≤c→a≤c Eq.refl b≤c = b≤c
 ≤-dichotomy {suc m} {suc n} with ≤-dichotomy {m} {n}
 ...                         | inj₁ m≤n  = inj₁ (s≤s m≤n)
 ...                         | inj₂ n≤m = inj₂ (s≤s n≤m)
+
+≤-dichotomy′ : {m n : ℕ} → (m < n) ⊎ (n ≤ m)
+≤-dichotomy′ {m} {zero} = inj₂ z≤n
+≤-dichotomy′ {zero} {suc n} = inj₁ (s≤s z≤n)
+≤-dichotomy′ {suc m} {suc n} with ≤-dichotomy′ {m} {n}
+...                         | inj₁ x = inj₁ (s≤s x)
+...                         | inj₂ y = inj₂ (s≤s y)
+
+sa<sb→a<b : {m n : ℕ} → suc m < suc n → m < n
+sa<sb→a<b (s≤s x) = x
+

@@ -1,7 +1,5 @@
 module DomainTheory.BasicObjects.posets-etc where
 
-open import misc
-
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
 open Eq using (_≡_; cong)
@@ -9,6 +7,8 @@ open Eq using (_≡_; cong)
 open import Data.Nat using (ℕ; zero; suc; _≤_; _+_; s≤s; z≤n)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂) 
+
+open import misc
 
 data Fin : ℕ → Set where
   fzero : {n : ℕ} → Fin (suc n)

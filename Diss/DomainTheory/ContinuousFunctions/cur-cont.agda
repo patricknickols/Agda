@@ -3,10 +3,13 @@ module DomainTheory.ContinuousFunctions.cur-cont where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; cong; refl)
 open Eq.≡-Reasoning
-open import DomainTheory.BasicObjects.posets-etc
-open import misc using (pair)
+
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Product renaming (_,_ to ⟨_,_⟩)
+
+open import DomainTheory.BasicObjects.posets-etc
+open import DomainTheory.BasicObjects.theorems
+open import misc
 
 open poset
 open domain

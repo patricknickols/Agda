@@ -3,17 +3,23 @@ module PCF.pcf where
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
-open import DomainTheory.BasicObjects.posets-etc
-open import DomainTheory.ContinuousFunctions.ev-cont using (ev-cont)
-open import DomainTheory.ContinuousFunctions.if-cont using (if-cont)
-open import DomainTheory.ContinuousFunctions.cur-cont using (cur-cont)
-open import misc using (ℕ⊥; 𝔹⊥; _∘_; constant-fun-is-cont; pair-f; extend-function; domain-dependent-projection)
+
 open import Data.Nat using (ℕ; zero; suc; _<_; _≤?_; z≤n; s≤s; _+_; _≤_)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Bool using (Bool; true; false)
 open import Relation.Nullary using (¬_)
 open import Relation.Nullary.Decidable using (True; toWitness)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩) 
+
+open import DomainTheory.BasicObjects.posets-etc
+open import DomainTheory.BasicObjects.theorems
+open import DomainTheory.ContinuousFunctions.ev-cont using (ev-cont)
+open import DomainTheory.ContinuousFunctions.if-cont using (if-cont)
+open import DomainTheory.ContinuousFunctions.cur-cont using (cur-cont)
+open import DomainTheory.ContinuousFunctions.fix-cont using (tarski-continuous)
+
+open import misc
+
 
 open poset
 open domain
@@ -160,12 +166,13 @@ subst σ (`is-zero x) = `is-zero (subst σ x)
 subst σ (`pred x) = `pred (subst σ x)
 subst σ (if b then x else y) = if (subst σ b) then (subst σ x) else (subst σ y)
 
+
+σ : ∀ {Γ A B} {N : Γ , B ⊢ A} {M : Γ ⊢ B} → {A₁ : Type} → Γ , B ∋ A₁ → Γ ⊢ A₁
+σ {M = M} Z = M
+σ (S x)     = ` x
+
 _[_] : ∀ {Γ A B} → Γ , B ⊢ A → Γ ⊢ B → Γ ⊢ A
-_[_] {Γ} {A} {B} N M = subst {Γ , B} {Γ} σ N
-  where
-  σ : ∀ {A} → Γ , B ∋ A → Γ ⊢ A
-  σ Z     = M
-  σ (S x) = ` x
+_[_] {Γ} {A} {B} N M = subst {Γ , B} {Γ} (σ {Γ} {A} {B} {N} {M}) N
 
 
 data Value : ∀ {Γ A} → Γ ⊢ A → Set where
