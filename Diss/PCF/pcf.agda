@@ -295,12 +295,30 @@ progress (μ M) = step β-μ
 context-⟦_⟧ : Context → domain
 context-⟦ Γ ⟧ = domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
 
+unconcat : {Γ : Context} {τ : Type} → cont-fun context-⟦ Γ , τ ⟧ (domain-product context-⟦ Γ ⟧ ⟦ τ ⟧)
+g (mon unconcat) x (fzero) i = x (fsucc i)
+g (mon unconcat) x (fsucc fzero) = x fzero
+mon (mon unconcat) x fzero i = x (fsucc i)
+mon (mon unconcat) x (fsucc fzero) = x fzero
+lub-preserve unconcat c = dependent-function-extensionality (λ {fzero → refl; (fsucc fzero) → refl})
+
+
+concat : {Γ : Context} {τ : Type} → cont-fun (domain-product context-⟦ Γ ⟧ ⟦ τ ⟧) context-⟦ Γ , τ ⟧
+g (mon concat) x fzero = x (fsucc fzero)
+g (mon concat) x (fsucc n) = x fzero n
+mon (mon concat) x fzero = x (fsucc fzero)
+mon (mon concat) x (fsucc i) = x (fzero) i
+lub-preserve concat c = dependent-function-extensionality (λ {fzero → refl; (fsucc n) → refl}) 
+
+{-
 helpful-lemma-chain : {Γ : Context} {A : Type} → chain (pos (domain-product context-⟦ Γ ⟧ ⟦ A ⟧)) → chain (pos (context-⟦ Γ , A ⟧))
 g (helpful-lemma-chain c) x = λ {fzero → g c x (fsucc fzero); (fsucc n) → g c x fzero n}
 mon (helpful-lemma-chain c) a≤a′ fzero = mon c a≤a′ (fsucc fzero)
 mon (helpful-lemma-chain c) a≤a′ (fsucc i) = mon c a≤a′ (fzero) i 
-
+-}
 helpful-lemma-blah : {Γ : Context} {A B : Type} → cont-fun (context-⟦ Γ , A ⟧) ⟦ B ⟧ → cont-fun (domain-product context-⟦ Γ ⟧ ⟦ A ⟧) ⟦ B ⟧
+helpful-lemma-blah f = f ∘ concat
+{-
 mon (helpful-lemma-blah f) = record { g = λ x → g (mon f) λ {fzero → x (fsucc fzero); (fsucc n) → x fzero n}
                                     ; mon = λ a≤a′ → mon (mon f) λ {fzero → a≤a′ (fsucc fzero); (fsucc n) → a≤a′ fzero n}
                                     }
@@ -321,7 +339,7 @@ lub-preserve (helpful-lemma-blah {Γ} {A} {B} f) c =
    ⟩
     ⊔ (chain-complete ⟦ B ⟧ (chain-map c (mon (helpful-lemma-blah {Γ} {A} {B} f))))
   ∎
-
+-}
 
 s⊥ : cont-fun ℕ⊥ ℕ⊥
 s : ℕ → A (pos ℕ⊥)
