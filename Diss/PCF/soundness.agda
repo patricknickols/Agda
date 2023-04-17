@@ -257,13 +257,36 @@ refl-lemma-maybe {Γ} {Δ} {X} {x₁} {n} =
     x₁ (fsucc n)
   ∎
 
+--comm-id : {Γ : Context} {X : Type} {f : (A (pos context-⟦ Γ , X ⟧)) → A (pos (context-⟦ Γ , X ⟧))} {x₁ : A (pos context-⟦ Γ , X ⟧)} {n : Fin {!!}}
+--  → f x₁ (fsucc n) ≡ f (λ i → x₁ (fsucc i)) n
 
+annoying-lemma : {Γ : Context} {X : Type} {x₁ : A (pos context-⟦ Γ , X ⟧)} {n : Fin (length Γ)}
+  → g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n) ≡ g (mon ⟦ id-σ ⟧ₛ) (λ i → x₁ (fsucc i)) n
+
+annoying-lemma {Γ} {X} {x₁} {n} =
+  begin
+    g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n)
+  ≡⟨ {!!} ⟩
+    g (mon ⟦ id-σ ⟧ₛ) (λ i → x₁ (fsucc i)) n
+  ∎
+
+restrict-context : {Γ : Context} {X : Type} → (A (pos context-⟦ Γ , X ⟧)) → (A (pos context-⟦ Γ ⟧))
+restrict-context x = λ i → x (fsucc i)
 
 lemma-55′ : (Γ : Context) → ⟦ id-σ {Γ} ⟧ₛ ≡ id
 lemma-55-try-2 : (Γ : Context) → ∀ {x₁ : A (pos context-⟦ Γ ⟧) } {n : Fin (length Γ)}
   → g (mon ⟦ id-σ {Γ} ⟧ₛ) x₁ n ≡ x₁ n
+
+
 lemma-55-try-2 (Γ , x) {n = fzero} = refl
-lemma-55-try-2 (Γ , x) {x₁} {fsucc n} = {!lemma-55-try-2 Γ {? x₁} {n}!}
+lemma-55-try-2 (Γ , x) {x₁} {fsucc n} =
+  begin
+    g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n)
+  ≡⟨ annoying-lemma {Γ} {x} {x₁} {n} ⟩
+    g (mon ⟦ id-σ ⟧ₛ) (λ i → x₁ (fsucc i)) n
+  ≡⟨ lemma-55-try-2 Γ {restrict-context x₁} {n} ⟩
+    x₁ (fsucc n)
+  ∎
 
 
 lemma-55′ ∅ = cont-fun-extensionality λ x → dependent-function-extensionality λ ()
