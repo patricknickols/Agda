@@ -167,12 +167,12 @@ subst σ (`pred x) = `pred (subst σ x)
 subst σ (if b then x else y) = if (subst σ b) then (subst σ x) else (subst σ y)
 
 
-σ : ∀ {Γ A B} {N : Γ , B ⊢ A} {M : Γ ⊢ B} → {A₁ : Type} → Γ , B ∋ A₁ → Γ ⊢ A₁
+σ : ∀ {Γ B} {M : Γ ⊢ B} → ({A₁ : Type} → Γ , B ∋ A₁ → Γ ⊢ A₁)
 σ {M = M} Z = M
 σ (S x)     = ` x
 
 _[_] : ∀ {Γ A B} → Γ , B ⊢ A → Γ ⊢ B → Γ ⊢ A
-_[_] {Γ} {A} {B} N M = subst {Γ , B} {Γ} (σ {Γ} {A} {B} {N} {M}) N
+_[_] {Γ} {A} {B} N M = subst {Γ , B} {Γ} (σ {Γ} {B} {M}) N
 
 
 data Value : ∀ {Γ A} → Γ ⊢ A → Set where
