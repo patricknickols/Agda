@@ -32,13 +32,18 @@ weaken-σ : {Γ Δ : Context} {τ : Type} (σ : {A : Type} → Γ , τ ∋ A →
 weaken-σ σ x = σ (S x)
 
 _▷_ : (Γ Δ : Context) → Set
-Γ ▷ Δ = ({A : Type} → Δ ∋ A → Γ ∋ A)
+Γ ▷ Δ = ({A : Type} → Γ ∋ A → Δ ∋ A)
 
 --w-⟦_⟧ : {Γ Δ : Context} → (pf : Γ ▷ Δ)  → cont-fun context-⟦ Γ ⟧ context-⟦ Δ ⟧ 
 
 ⟦_⟧ₛ : {Δ Γ : Context} → ({A : Type} → Γ ∋ A → Δ ⊢ A) → cont-fun context-⟦ Δ ⟧ context-⟦ Γ ⟧
 ⟦_⟧ₛ {Γ = ∅} σ = record { mon = record { g = λ x → λ() ; mon = λ x → reflexive (pos context-⟦ ∅ ⟧) } ; lub-preserve = λ c → dependent-function-extensionality (λ()) }
 ⟦_⟧ₛ {Δ} {Γ = Γ , x} σ = record { mon = record { g = λ δ → λ {fzero → g (mon (⟦ Δ ⊢′ σ Z ⟧))δ; (fsucc n) → (g (mon (⟦ weaken-σ σ ⟧ₛ))δ) n} ; mon = λ x₁ → λ {fzero → mon (mon ⟦ Δ ⊢′ σ Z ⟧) x₁; (fsucc n) → mon (mon ⟦ weaken-σ σ ⟧ₛ) x₁ n} } ; lub-preserve = λ c → dependent-function-extensionality (λ {fzero → lub-preserve ⟦ Δ ⊢′ σ Z ⟧ c; (fsucc n) → cong (λ x → x n) (lub-preserve ⟦ weaken-σ σ ⟧ₛ c)}) } 
+
+
+⟦_⟧ᵣ : {Γ Δ : Context} (ρ : Δ ▷ Γ) → A (pos context-⟦ Γ ⟧) → A (pos context-⟦ Δ ⟧)
+⟦_⟧ᵣ {Γ} {Δ , x} ρ γ fzero = g (mon (project-x Γ (ρ Z))) γ
+⟦_⟧ᵣ {Γ} {Δ , x} ρ γ (fsucc i) = ⟦  (λ v → ρ (S v)) ⟧ᵣ γ i
 
 _×-cont_ : {A B C D : domain} → cont-fun A B → cont-fun C D → cont-fun (domain-product A C) (domain-product B D)
 
@@ -63,6 +68,74 @@ shift-lemma {Γ} {Δ} {τ} {τ′} f = concat {Γ} {τ′} ∘ (f ∘ unconcat)
 
 restrict-context : {Γ : Context} {X : Type} → (A (pos context-⟦ Γ , X ⟧)) → (A (pos context-⟦ Γ ⟧))
 restrict-context = g (mon (restrict-context-cont))
+
+
+weaken'-ρ-lemma : {Γ Δ : Context} {τ : Type} (ρ : Γ ▷ Δ)(δ : A (pos context-⟦ Δ , τ ⟧))(i : Fin (length Γ))
+            → ⟦ (λ v → S (ρ v)) ⟧ᵣ δ i ≡ ⟦ ρ ⟧ᵣ (restrict-context δ) i
+weaken'-ρ-lemma {Γ , x} {Δ} ρ δ fzero = refl
+weaken'-ρ-lemma {Γ , x} {Δ} ρ δ (fsucc i) = weaken'-ρ-lemma {Γ} (λ v → ρ (S v)) δ i
+
+rename-sound : (Γ Δ : Context){τ : Type}(ρ : Γ ▷ Δ)(t : Γ ⊢ τ)(δ : A (pos context-⟦ Δ ⟧))
+        → g (mon (⟦ Δ ⊢′ rename ρ t ⟧)) δ ≡ g (mon (⟦ Γ ⊢′ t ⟧)) (⟦ ρ ⟧ᵣ δ)
+
+rename-sound Γ Δ ρ (` Z) δ = refl
+rename-sound (Γ , τ) Δ ρ (` (S x)) δ = rename-sound Γ Δ (λ z → ρ (S z)) (` x) δ
+{-
+rename-sound Γ Δ ρ (ƛ_ {A = A₁} t) δ =
+  begin
+    g (cur-mon (helpful-lemma-blah ⟦ Δ , A₁ ⊢′ rename (ext ρ) t ⟧)) δ
+  ≡⟨ {!!} ⟩
+    {!!}
+  ≡⟨ {! rename-sound (Γ , A₁) (Δ , A₁) (ext ρ) t z !} ⟩
+    {!!}
+  ≡⟨ {!!} ⟩
+    g (cur-mon (helpful-lemma-blah ⟦ Γ , A₁ ⊢′ t ⟧)) (⟦ ρ ⟧ᵣ δ)
+  ∎
+-}
+rename-sound Γ Δ ρ (t · t₁) δ = Eq.cong₂ (λ f f′ → g (mon f) f′) (rename-sound Γ Δ ρ t δ) (rename-sound Γ Δ ρ t₁ δ)
+rename-sound Γ Δ ρ `zero δ = refl
+rename-sound Γ Δ ρ (`is-zero t) δ = cong (g (mon z⊥)) (rename-sound Γ Δ ρ t δ)
+rename-sound Γ Δ ρ (`suc t) δ = cong (g (mon s⊥)) (rename-sound Γ Δ ρ t δ)
+rename-sound Γ Δ ρ (`pred t) δ = cong (g (mon p⊥)) (rename-sound Γ Δ ρ t δ)
+rename-sound Γ Δ ρ `true δ = refl
+rename-sound Γ Δ ρ `false δ = refl
+{-
+rename-sound Γ Δ ρ (if t then t₁ else t₂) δ = cong (g (mon if-cont))
+  begin
+    g (mon (pair-f ⟦ Δ ⊢′ rename ρ t ⟧ (pair-f ⟦ Δ ⊢′ rename ρ t₁ ⟧ ⟦ Δ ⊢′ rename ρ t₂ ⟧))) δ
+  ≡⟨ {! !} ⟩
+    g (mon (pair-f ⟦ Γ ⊢′ t ⟧ (pair-f ⟦ Γ ⊢′ t₁ ⟧ ⟦ Γ ⊢′ t₂ ⟧))) (⟦ ρ ⟧ᵣ δ)
+  ∎)
+-}
+rename-sound Γ Δ ρ (μ t) δ = cong (g (mon tarski-continuous)) (rename-sound Γ Δ ρ t δ)
+
+
+⟦id⟧ᵣ : {Γ : Context}(γ : A (pos context-⟦ Γ ⟧))(i : Fin (length Γ)) → ⟦ (λ v → v) ⟧ᵣ γ i ≡ γ i
+⟦S⟧-fsucc : {τ : Type} (Γ : Context)(γ : A (pos context-⟦ Γ , τ ⟧))(i : Fin (length Γ))
+      → ⟦ S_ ⟧ᵣ γ i ≡ γ (fsucc i)
+
+⟦id⟧ᵣ {Γ , x} γ fzero = refl
+⟦id⟧ᵣ {Γ , x} γ (fsucc i) = ⟦S⟧-fsucc Γ γ i
+
+⟦S⟧-fsucc {A} Γ γ i = begin
+      ⟦ S_ ⟧ᵣ γ i
+  ≡⟨ weaken'-ρ-lemma (λ v → v) γ i ⟩
+      ⟦ (λ v → v) ⟧ᵣ (restrict-context γ) i
+  ≡⟨ ⟦id⟧ᵣ (restrict-context γ) i ⟩
+      γ (fsucc i)
+  ∎
+
+weaken-tm-lemma : (Γ : Context){τ B : Type}(t : Γ ⊢ τ)(γ : A (pos context-⟦ Γ , B ⟧))
+     → g (mon (⟦ Γ , B ⊢′ rename S_ t ⟧)) γ ≡ g (mon (⟦ Γ ⊢′ t ⟧)) (restrict-context γ)
+weaken-tm-lemma Γ {A}{B} t γ =
+  begin
+     g (mon ⟦ Γ , B ⊢′ rename S_ t ⟧) γ
+  ≡⟨ rename-sound Γ (Γ , B) S_ t γ ⟩
+     g (mon ⟦ Γ ⊢′ t ⟧) (⟦ S_ ⟧ᵣ γ)
+  ≡⟨ cong (g (mon ⟦ Γ ⊢′ t ⟧)) (dependent-function-extensionality (⟦S⟧-fsucc Γ γ)) ⟩
+     g (mon (⟦ Γ ⊢′ t ⟧)) (restrict-context γ)
+  ∎
+
 
 exts-semantics : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ ∋ A → Δ ⊢ A} → ∀ {x : A (pos context-⟦ Δ , τ ⟧)} {n : Fin (suc (length Γ))} →  g (mon (⟦ (λ {A} → exts σ {A} {τ} ) ⟧ₛ)) x n ≡ g (mon ((concat ∘ (⟦ σ ⟧ₛ ×-cont id)) ∘ unconcat)) x n
 
@@ -260,16 +333,7 @@ weaken'-σ σ x = rename S_ (σ x)
 weaken'-σ-lemma : {Γ Δ : Context} {τ : Type} (σ : {A : Type} → Γ ∋ A → Δ ⊢ A)(δ : A (pos context-⟦ Δ , τ ⟧)) (i : Fin (length Γ))
   → g (mon ⟦ weaken'-σ σ ⟧ₛ) δ i ≡ g (mon (⟦ σ ⟧ₛ)) (restrict-context {Δ} δ) i
 
-weaken'-σ-lemma {Γ , x} {Δ} {τ} σ δ fzero =
-  begin
-    g (mon ⟦ weaken'-σ σ ⟧ₛ) δ fzero
-  ≡⟨ refl ⟩
-    g (mon ⟦ Δ , τ ⊢′ (rename S_) (σ Z) ⟧)δ
-  ≡⟨ {!!} ⟩
-    g (mon (⟦ σ ⟧ₛ ∘ restrict-context-cont)) δ fzero
-  ≡⟨ refl ⟩
-    g (mon ⟦ σ ⟧ₛ) (restrict-context δ) fzero
-  ∎
+weaken'-σ-lemma {Γ = Γ , x}{Δ} σ δ fzero = weaken-tm-lemma Δ (σ Z) δ
 weaken'-σ-lemma {Γ , x} σ δ (fsucc i) = weaken'-σ-lemma {Γ} (weaken-σ σ) δ i
 
 lemma-55 : {Γ : Context} → (γ : A (pos (context-⟦ Γ ⟧))) (i : (Fin (length Γ))) → g (mon (⟦ `_ ⟧ₛ)) γ i ≡ γ i
