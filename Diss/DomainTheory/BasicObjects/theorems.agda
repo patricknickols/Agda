@@ -543,3 +543,9 @@ pair-equality refl refl = refl
 
 pair-η : ∀ {D} {E} → {a : poset.A (pos (domain-product D E))} → pair {D} {E} (a fzero) (a (fsucc fzero)) ≡ a
 pair-η = dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl}
+
+
+π₁ : {D₁ D₂ : domain} → cont-fun (domain-product D₁ D₂) D₁
+π₁ {D₁} {D₂} = domain-dependent-projection (Fin 2) (domain-projections D₁ D₂) fzero
+π₂ : {D₁ D₂ : domain} → cont-fun (domain-product D₁ D₂) D₂
+π₂ {D₁} {D₂} = domain-dependent-projection (Fin 2) (domain-projections D₁ D₂) (fsucc fzero)

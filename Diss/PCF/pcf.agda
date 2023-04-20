@@ -371,17 +371,22 @@ project-x′ : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
                                                   (λ x → ⟦ lookup₂ {Γ} x ⟧))
                                                 ⟦ lookup₂ (conv Γ∋x) ⟧
 project-x′ {x} Γ Γ∋x =  domain-dependent-projection (Fin (length Γ)) (λ x → ⟦ lookup₂ x ⟧) (conv Γ∋x)
-
+{-
 project-x-lemma : ∀ {x} → {Γ : Context} → (Γ∋x : Γ ∋ x) → lookup₂ (conv Γ∋x) ≡ x
 project-x-lemma Z = refl
 project-x-lemma (S Γ∋x) = project-x-lemma Γ∋x
-
+-}
 project-x : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
                                                 (domain-dependent-product (Fin (length Γ))
                                                   (λ x → ⟦ lookup₂ {Γ} x ⟧))
                                                 ⟦ x ⟧
-project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ∋x
+--project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ∋x
 
+restrict-context-cont : {Γ : Context} {X : Type} → cont-fun context-⟦ Γ , X ⟧ context-⟦ Γ ⟧
+restrict-context-cont = π₁ ∘ unconcat
+
+project-x (Γ , τ) Z = project-x′ (Γ , τ) Z
+project-x (Γ , τ) (S Γ∋x) = project-x Γ Γ∋x ∘ restrict-context-cont
 
 ⟦_⊢′_⟧ : ∀ {A} → (Γ : Context) → (M : Γ ⊢ A) → cont-fun context-⟦ Γ ⟧ ⟦ A ⟧
 ⟦ Γ ⊢′ `zero ⟧ = constant-fun {Γ} ℕ 0
