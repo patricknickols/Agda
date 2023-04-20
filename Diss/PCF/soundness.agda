@@ -42,10 +42,6 @@ _▷_ : (Γ Δ : Context) → Set
 
 _×-cont_ : {A B C D : domain} → cont-fun A B → cont-fun C D → cont-fun (domain-product A C) (domain-product B D)
 
-π₁ : {D₁ D₂ : domain} → cont-fun (domain-product D₁ D₂) D₁
-π₁ {D₁} {D₂} = domain-dependent-projection (Fin 2) (domain-projections D₁ D₂) fzero
-π₂ : {D₁ D₂ : domain} → cont-fun (domain-product D₁ D₂) D₂
-π₂ {D₁} {D₂} = domain-dependent-projection (Fin 2) (domain-projections D₁ D₂) (fsucc fzero)
 
 g (mon (f ×-cont f′)) x fzero = g (mon f) (x fzero)
 g (mon (f ×-cont f′)) x (fsucc fzero) = g (mon f′) (x (fsucc fzero))
@@ -56,21 +52,51 @@ lub-preserve (_×-cont_ {A} {B} {C} {D} f f′) c = dependent-function-extension
      ; (fsucc fzero) → lub-preserve f′ (chain-of-functions (Fin 2) (domain-projections A C) c (fsucc fzero))
      })
 
+id : {A : domain} → cont-fun A A
+g (mon id) x = x
+mon (mon id) x = x
+lub-preserve (id {A₁}) c = same-f-same-lub {A₁} {c} {chain-map c (mon (id {A₁}))} refl
+
+
 shift-lemma : {Γ Δ : Context} {τ τ′ : Type} → cont-fun (domain-product context-⟦ Δ ⟧ ⟦ τ ⟧) (domain-product context-⟦ Γ ⟧ ⟦ τ′ ⟧) → cont-fun context-⟦ Δ , τ ⟧ context-⟦ Γ , τ′ ⟧
 shift-lemma {Γ} {Δ} {τ} {τ′} f = concat {Γ} {τ′} ∘ (f ∘ unconcat)
+
+restrict-context : {Γ : Context} {X : Type} → (A (pos context-⟦ Γ , X ⟧)) → (A (pos context-⟦ Γ ⟧))
+restrict-context = g (mon (restrict-context-cont))
+
+exts-semantics : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ ∋ A → Δ ⊢ A} → ∀ {x : A (pos context-⟦ Δ , τ ⟧)} {n : Fin (suc (length Γ))} →  g (mon (⟦ (λ {A} → exts σ {A} {τ} ) ⟧ₛ)) x n ≡ g (mon ((concat ∘ (⟦ σ ⟧ₛ ×-cont id)) ∘ unconcat)) x n
+
+exts-semantics {n = fzero} = refl
+exts-semantics {Γ , x} {Δ} {τ} {σ} {x₁} {fsucc n} =
+  begin
+    g (mon ⟦ exts σ ⟧ₛ) x₁ (fsucc n)
+  ≡⟨ {!!} ⟩
+    g (mon ((concat {Γ , x} {τ} ∘ ((⟦ σ ⟧ₛ ×-cont id) ∘ (unconcat {Δ} {τ}))))) x₁ (fsucc n)
+  ∎ 
+
+--exts-semantics {Γ} {σ = weaken-σ σ} {n = n}
+inv-cats : {Γ : Context} {τ : Type} → unconcat {Γ} {τ} ∘ concat ≡ id
+inv-cats = cont-fun-extensionality (λ x → dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → refl})
+
+∘-assoc-lemma : {D₁ D₂ D₃ D₄ D₅ D₆ : domain} → ∀ {f₁ : cont-fun D₂ D₁} {f₂ : cont-fun D₃ D₂} {f₃ : cont-fun D₄ D₃} {f₄ : cont-fun D₅ D₄} {f₅ : cont-fun D₆ D₅} → (f₁ ∘ f₂) ∘ ((f₃ ∘ f₄) ∘ f₅) ≡ (f₁ ∘ (f₂ ∘ f₃)) ∘ (f₄ ∘ f₅)
+∘-assoc-lemma = cont-fun-extensionality (λ x → refl)
 
 weaken-lemma : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ ∋ A → Δ ⊢ A} {i : Fin (length Γ)} {x : A (pos (context-⟦ Δ , τ ⟧))}
   → (g (mon (⟦ weaken-σ {Γ} {Δ , τ} {τ} (exts σ) ⟧ₛ)) x i
     ≡
     g (mon (shift-lemma {Γ} {Δ} {τ} {τ} (pair-f ( ⟦ σ ⟧ₛ ∘ π₁ ) (π₂)))) x (fsucc i))
+
 weaken-lemma {∅} {i = ()}
-weaken-lemma {Γ , X} {Δ} {τ} {σ} {i = fzero} {x} = {!g (mon ⟦ Δ , τ ⊢′ weaken-σ (exts σ) Z ⟧) x!}
+weaken-lemma {Γ , X} {Δ} {τ} {σ} {i = fzero} {x} =
+  begin
+    g (mon ((π₁ ∘ unconcat) ∘ ⟦ (exts σ) ⟧ₛ)) x fzero
+  ≡⟨ cong (λ z → g (mon (π₁ ∘ unconcat)) z fzero ) (dependent-function-extensionality λ i → exts-semantics {Γ , X} {Δ} {τ} {σ} {x} {i})  ⟩
+    g (mon (((π₁ ∘ (unconcat {Γ , X} {τ} ∘ concat)) ∘ (⟦ σ ⟧ₛ ×-cont id)) ∘ unconcat)) x fzero
+  ≡⟨ cong (λ z → g (mon ((((π₁ ∘ z) ∘ pair-f (⟦ σ ⟧ₛ ∘ π₁)π₂)) ∘ unconcat)) x fzero) (inv-cats {Γ , X} {τ}) ⟩
+    g (mon (shift-lemma {Γ , X} {Δ} {τ} {τ} (pair-f (⟦ σ ⟧ₛ ∘ π₁) π₂))) x (fsucc fzero)
+  ∎
 weaken-lemma {Γ , X} {i = fsucc i} = weaken-lemma { Γ } {i = i}
 
-id : {A : domain} → cont-fun A A
-g (mon id) x = x
-mon (mon id) x = x
-lub-preserve (id {A₁}) c = same-f-same-lub {A₁} {c} {chain-map c (mon (id {A₁}))} refl
 
 lemma-53 : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ ∋ A → Δ ⊢ A} → ⟦_⟧ₛ {Δ , τ} {Γ , τ} (exts σ) ≡ shift-lemma (⟦ σ ⟧ₛ ×-cont id)
 lemma-53 {Γ} {Δ} {τ} {σ} = cont-fun-extensionality λ x → dependent-function-extensionality λ {fzero → refl; (fsucc i) →
@@ -146,7 +172,28 @@ comm-triangle {Γ} {Δ} (t · t₁) σ =
     (ev-cont ∘ pair-f ((⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ)) ((⟦ Γ ⊢′ t₁ ⟧ ∘ ⟦ σ ⟧ₛ)))
   ≡⟨ cont-fun-extensionality (λ x → refl) ⟩ 
     (ev-cont ∘ pair-f ⟦ Γ ⊢′ t ⟧ ⟦ Γ ⊢′ t₁ ⟧) ∘ ⟦ σ ⟧ₛ
-  ∎ 
+  ∎
+
+-}
+needed-sublemma : {D₁ D₂ D₃ : domain} {f₁ : cont-fun D₂ 𝔹⊥} {f₂ f₃ : cont-fun D₂ D₃ } {f′ : cont-fun D₁ D₂} → ∀ {x}
+  → g (mon (pair-f (f₁ ∘ f′) (pair-f (f₂ ∘ f′) (f₃ ∘ f′)))) x
+    ≡
+    g (mon (pair-f f₁ (pair-f f₂ f₃))) (g (mon f′) x)
+
+needed-sublemma = dependent-function-extensionality λ {fzero → refl; (fsucc fzero) → dependent-function-extensionality (λ {fzero → refl; (fsucc fzero) → refl})}
+
+needed-lemma : {D₁ D₂ D₃ : domain} {f₁ : cont-fun D₂ 𝔹⊥} {f₂ f₃ : cont-fun D₂ D₃ } {f′ : cont-fun D₁ D₂}
+  → (if-cont ∘ pair-f (f₁ ∘ f′) (pair-f (f₂ ∘ f′) (f₃ ∘ f′)))
+    ≡
+    (if-cont ∘ pair-f f₁ (pair-f f₂ f₃)) ∘ f′
+
+needed-lemma {f₁ = f₁} {f₂} {f₃} {f′} = cont-fun-extensionality λ x →
+  begin
+    g (mon if-cont) (g (mon (pair-f (f₁ ∘ f′) (pair-f (f₂ ∘ f′) (f₃ ∘ f′)))) x)
+  ≡⟨ cong if-g (needed-sublemma {f₁ = f₁} {f₂} {f₃} {f′} {x}) ⟩
+    g (mon if-cont) (g (mon (pair-f f₁ (pair-f f₂ f₃))) (g (mon f′) x))
+  ∎
+{-
 comm-triangle {Γ} {Δ} (if t then t₁ else t₂) σ =
   begin
     if-cont ∘ pair-f ⟦ Δ ⊢′ subst σ t ⟧ (pair-f ⟦ Δ ⊢′ subst σ t₁ ⟧ ⟦ Δ ⊢′ subst σ t₂ ⟧)
@@ -154,14 +201,17 @@ comm-triangle {Γ} {Δ} (if t then t₁ else t₂) σ =
     if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f ⟦ Δ ⊢′ subst σ t₁ ⟧ ⟦ Δ ⊢′ subst σ t₂ ⟧)
   ≡⟨ cong (λ x → if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f x ⟦ Δ ⊢′ subst σ t₂ ⟧)) (comm-triangle t₁ σ) ⟩
     (if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f (⟦ Γ ⊢′ t₁ ⟧ ∘ ⟦ σ ⟧ₛ) ⟦ Δ ⊢′ subst σ t₂ ⟧))
-  ≡⟨ {!comm-triangle t₂ σ!} ⟩
-    (if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f (⟦ Γ ⊢′ t₁ ⟧ ∘ ⟦ σ ⟧ₛ) (⟦ Γ ⊢′ t₂ ⟧ ∘ ⟦ σ ⟧ₛ) ))
-  ≡⟨ cont-fun-extensionality (λ x → ?) ⟩
-    ((if-cont ∘ pair-f ⟦ Γ ⊢′ t ⟧ (pair-f ⟦ Γ ⊢′ t₁ ⟧ ⟦ Γ ⊢′ t₂ ⟧)) ∘ ⟦ σ ⟧ₛ)
+  ≡⟨ cong (λ x → if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f (⟦ Γ ⊢′ t₁ ⟧ ∘ ⟦ σ ⟧ₛ) x)) (comm-triangle t₂ σ) ⟩
+    if-cont ∘ pair-f (⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ) (pair-f (⟦ Γ ⊢′ t₁ ⟧ ∘ ⟦ σ ⟧ₛ) (⟦ Γ ⊢′ t₂ ⟧ ∘ ⟦ σ ⟧ₛ))
+  ≡⟨ needed-lemma {f₁ = ⟦ Γ ⊢′ t ⟧} {⟦ Γ ⊢′ t₁ ⟧} {⟦ Γ ⊢′ t₂ ⟧} {⟦ σ ⟧ₛ} ⟩
+    (if-cont ∘ pair-f ⟦ Γ ⊢′ t ⟧ (pair-f ⟦ Γ ⊢′ t₁ ⟧ ⟦ Γ ⊢′ t₂ ⟧)) ∘ ⟦ σ ⟧ₛ
     ∎
 -}
+
+
+comm-triangle {Γ , X} {Δ} (` Z) σ = cont-fun-extensionality (λ x → refl)
+comm-triangle {Γ , X} {Δ} (` (S x)) σ = cont-fun-extensionality (λ x₁ → (cong (λ z → g (mon z) x₁) (comm-triangle {Γ} {Δ} (` x) (weaken-σ σ))))
 {-
-comm-triangle {Γ} {Δ} (` x) σ = cont-fun-extensionality (λ x₁ → {!!})
 comm-triangle {Γ} {Δ} (ƛ_ {A = A} {B} t) σ =
   begin
     cur-cont (helpful-lemma-blah ⟦ Δ , A ⊢′ subst (exts σ) t ⟧)
@@ -204,201 +254,39 @@ id-σ {∅} ()
 id-σ {Γ , τ} x = ` x
 
 
-weaken-σ-comp : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ , τ ∋ A → Δ ⊢ A} → ⟦ weaken-σ {Γ} {Δ} {τ} σ ⟧ₛ ≡ (π₁ ∘ unconcat) ∘ ⟦ σ ⟧ₛ
-weaken-σ-comp  = cont-fun-extensionality (λ x₁ → dependent-function-extensionality (λ i → refl))
+weaken'-σ : {Γ Δ : Context} {τ : Type} (σ : {A : Type} → Γ ∋ A → Δ ⊢ A) → ({A : Type} → Γ ∋ A → Δ , τ ⊢ A)
+weaken'-σ σ x = rename S_ (σ x)
 
-abstracted-calc : {Γ Δ : Context} {τ τ′ X : Type} {M : Γ , X ⊢ τ} {x : A (pos (context-⟦ Γ , X ⟧))} {n : Fin (length Γ)}
-  → g (mon ((π₁ ∘ unconcat) ∘  ⟦ weaken-σ (σ {Γ , X} {τ} {M}) ⟧ₛ)) x n
-    ≡
-    g (mon ((π₁ ∘ unconcat) ∘ id)) x n
+weaken'-σ-lemma : {Γ Δ : Context} {τ : Type} (σ : {A : Type} → Γ ∋ A → Δ ⊢ A)(δ : A (pos context-⟦ Δ , τ ⟧)) (i : Fin (length Γ))
+  → g (mon ⟦ weaken'-σ σ ⟧ₛ) δ i ≡ g (mon (⟦ σ ⟧ₛ)) (restrict-context {Δ} δ) i
 
-key-lemma-55 : {Γ : Context} {τ τ′ X : Type} {M : Γ , X ⊢ τ} → ∀ {x : A (pos context-⟦ Γ , X ⟧)} {n : Fin (length Γ)}
-  → (λ { fzero → g (mon ⟦ Γ , X ⊢′ weaken-σ (λ {A = A₁} → (σ {Γ , X} {τ} {M})) Z ⟧) x
-       ; (fsucc n) → g (mon ⟦ weaken-σ (weaken-σ ((σ {Γ , X} {τ} {M} ))) ⟧ₛ) x n
-       })
-    ≡
-    x
-
-key-lemma-55 {x = x} = dependent-function-extensionality λ {fzero → refl; (fsucc n) → {!!}}
-
-{-
-lemma-52 : {Γ Γ′ : Context} {τ : Type} → Γ ⊢ τ → ({A : Type} → Γ ∋ A → Γ′ ⊢ A) → Γ′ ⊢ τ  
-lemma-52 (` x) σ = σ x
-lemma-52 (ƛ t) σ = ƛ lemma-52 t (exts σ)
-lemma-52 (t · t₁) σ = (lemma-52 t σ) · (lemma-52 t₁ σ) 
-lemma-52 `zero σ = `zero
-lemma-52 (`is-zero t) σ = `is-zero (lemma-52 t σ)
-lemma-52 (`suc t) σ = `suc (lemma-52 t σ)
-lemma-52 (`pred t) σ = `pred (lemma-52 t σ)
-lemma-52 `true σ = `true
-lemma-52 `false σ = `false
-lemma-52 (if t then t₁ else t₂) σ = if (lemma-52 t σ) then (lemma-52 t₁ σ) else (lemma-52 t₂ σ)
-lemma-52 (μ t) σ = μ (lemma-52 t σ)
--}
-
-restrict-context : {Γ : Context} {X : Type} → (A (pos context-⟦ Γ , X ⟧)) → (A (pos context-⟦ Γ ⟧))
-restrict-context x = λ i → x (fsucc i)
-
-refl-sublemma : {Γ Δ : Context} {X : Type} {σ : {A : Type} → Γ , X ∋ A → Δ ⊢ A} {x₁ : A (pos (context-⟦ Δ ⟧))} {n : Fin (length Γ)}
-  → g (mon ⟦ weaken-σ σ ⟧ₛ) x₁ n ≡ g (mon ⟦ σ ⟧ₛ) x₁ (fsucc n)
-
-refl-sublemma = refl
-
-actual-final-sublemma₁ : {Γ : Context} {X τ : Type} → {x : A (pos (context-⟦ Γ , τ , X ⟧))} {n : Fin (length Γ)}
-  → g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , τ , X} ⟧ₛ)) x (fsucc n) ≡ g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , τ} ⟧ₛ)) (restrict-context x) n
-
-actual-final-sublemma₂ : {Γ : Context} {τ τ′ : Type} → {x : A (pos (context-⟦ Γ , τ , τ′ ⟧))} {n : Fin (length Γ)}
-  → g (mon (⟦ `_ {Γ} ⟧ₛ ∘ (π₁ ∘ unconcat))) (restrict-context x) n ≡ g (mon (⟦ `_ {Γ , τ} ⟧ₛ ∘ (π₁ ∘ unconcat))) x (fsucc n)
-
-final-sublemma-maybe : {Γ : Context} {X : Type} → {x : A (pos (context-⟦ Γ , X  ⟧))} {n : Fin (length Γ)}
-  → g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , X} ⟧ₛ)) x n ≡ g (mon (⟦ `_ {Γ} ⟧ₛ ∘ (π₁ ∘ unconcat))) x n
-final-sublemma-maybe {Γ , x} {n = fzero} = refl
-final-sublemma-maybe {Γ , x} {X} {x₁} {fsucc n} =
+weaken'-σ-lemma {Γ , x} {Δ} {τ} σ δ fzero =
   begin
-    g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , x , X} ⟧ₛ)) x₁ (fsucc n)
-  ≡⟨ actual-final-sublemma₁ {Γ} {X} {x} {x₁} {n} ⟩
-    g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , x} ⟧ₛ)) (restrict-context x₁) n
-  ≡⟨ final-sublemma-maybe {Γ} {x} {restrict-context x₁} {n} ⟩
-    g (mon (⟦ `_ {Γ} ⟧ₛ ∘ (π₁ ∘ unconcat))) (restrict-context x₁) n
-  ≡⟨ actual-final-sublemma₂ {Γ} {x} {X} {x₁} {n} ⟩
-    g (mon (⟦ `_ {Γ , x} ⟧ₛ ∘ (π₁ ∘ unconcat))) x₁ (fsucc n)
-  ∎
-
---final-sublemma-maybe {Γ} {Δ , x} {n = fzero} = {!!}
---final-sublemma-maybe {Γ} {Δ , x} {x₁} {n = fsucc n} = {!final-sublemma-maybe {Γ} {Δ} {x₁} {n}!}
-
-final-lemma-maybe : {Γ : Context} → {x : A (pos (context-⟦ Γ ⟧))} → {n : Fin (length Γ)}
-  → g (mon ( ⟦ `_ ⟧ₛ)) x n ≡ x n
-{-
-final-lemma-maybe {∅} = dependent-function-extensionality (λ ())
-final-lemma-maybe {Γ , x} {x₂} = dependent-function-extensionality (λ {fzero → refl; (fsucc n) →
-  begin
-    g (mon (π₁ ∘ unconcat)) (g (mon ⟦ `_ ⟧ₛ) x₂) n
-  ≡⟨ cong (λ z → g (mon (π₁ ∘ unconcat)) z n) {!!} ⟩
-    g (mon (π₁ ∘ unconcat)) x₂ n
+    g (mon ⟦ weaken'-σ σ ⟧ₛ) δ fzero
   ≡⟨ refl ⟩
-    x₂ (fsucc n)
-  ∎})
--}
-
-final-lemma-maybe {Γ , x} {n = fzero} = refl
-final-lemma-maybe {Γ , x₁ , x} {x₂} {fsucc n} =
-  begin
-    g (mon ⟦ weaken-σ `_ ⟧ₛ) x₂ n
-  ≡⟨ refl ⟩
-    g (mon ((π₁ ∘ unconcat) ∘ ⟦ `_ {Γ , x₁ , x} ⟧ₛ)) x₂ n
-  ≡⟨ final-sublemma-maybe {Γ , x₁} {x} {x₂} {n} ⟩
-    g (mon (⟦ `_ {Γ , x₁} ⟧ₛ ∘ (π₁ ∘ unconcat))) x₂ n
-  ≡⟨ refl ⟩
-    g (mon ⟦ `_ ⟧ₛ) (g (mon (π₁ ∘ unconcat)) x₂) n
-  ≡⟨ refl ⟩
-    g (mon ⟦ `_ ⟧ₛ) (restrict-context x₂) n
-  ≡⟨ final-lemma-maybe {Γ , x₁} {restrict-context x₂} {n}⟩
-    x₂ (fsucc n)
-  ∎
-{-
-final-lemma-maybe {Γ , x₁ , x} {x₂} {fsucc (fsucc n)} =
-  begin
-    g (mon ⟦ weaken-σ `_ ⟧ₛ) x₂ (fsucc n)
-  ≡⟨ refl ⟩
-    g (mon (((π₁ ∘ unconcat) ∘ (π₁ ∘ unconcat)) ∘ ⟦ `_ ⟧ₛ)) x₂ n
+    g (mon ⟦ Δ , τ ⊢′ (rename S_) (σ Z) ⟧)δ
   ≡⟨ {!!} ⟩
-    g (mon ((π₁ ∘ unconcat) ∘ (π₁ ∘ unconcat))) x₂ n
+    g (mon (⟦ σ ⟧ₛ ∘ restrict-context-cont)) δ fzero
   ≡⟨ refl ⟩
-    x₂ (fsucc (fsucc n))
+    g (mon ⟦ σ ⟧ₛ) (restrict-context δ) fzero
   ∎
--}
---weaken-σ-comp : {Γ Δ : Context} {τ : Type} {σ : {A : Type} → Γ , τ ∋ A → Δ ⊢ A} → ⟦ weaken-σ {Γ} {Δ} {τ} σ ⟧ₛ ≡ (π₁ ∘ unconcat) ∘ ⟦ σ ⟧ₛ
+weaken'-σ-lemma {Γ , x} σ δ (fsucc i) = weaken'-σ-lemma {Γ} (weaken-σ σ) δ i
 
-refl-lemma-maybe : {Γ : Context} {X : Type} → ∀ {x₁ : A (pos (context-⟦ Γ , X ⟧))} {n}
-  → g (mon ⟦ weaken-σ (λ x₂ → ` x₂) ⟧ₛ) x₁ n ≡ x₁ (fsucc n)
-refl-lemma-maybe {Γ} {X} {x₁} {n} =
+lemma-55 : {Γ : Context} → (γ : A (pos (context-⟦ Γ ⟧))) (i : (Fin (length Γ))) → g (mon (⟦ `_ ⟧ₛ)) γ i ≡ γ i
+lemma-55 {Γ , x} γ fzero = refl
+lemma-55 {Γ , x} γ (fsucc i) =
   begin
-    g (mon ⟦ weaken-σ `_ ⟧ₛ) x₁ n
-  ≡⟨ refl-sublemma {Γ} {Γ , X} {X} {`_} ⟩
-    g (mon ⟦ `_ ⟧ₛ) x₁ (fsucc n)
-  ≡⟨ final-lemma-maybe {Γ , X} {x₁} {(fsucc n)} ⟩
-    x₁ (fsucc n)
-  ∎
-
--- g (mon (⟦ Δ ⊢′ σ Z ⟧))δ; (fsucc n) → (g (mon (⟦ weaken-σ σ ⟧ₛ))δ) n}
-
---comm-id : {Γ : Context} {X : Type} {f : (A (pos context-⟦ Γ , X ⟧)) → A (pos (context-⟦ Γ , X ⟧))} {x₁ : A (pos context-⟦ Γ , X ⟧)} {n : Fin {!!}}
---  → f x₁ (fsucc n) ≡ f (λ i → x₁ (fsucc i)) n
-
-
-
-annoying-lemma : {Γ : Context} {X : Type} {x₁ : A (pos context-⟦ Γ , X ⟧)} {n : Fin (length Γ)}
-  → g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n) ≡ g (mon ⟦ id-σ ⟧ₛ) (λ i → x₁ (fsucc i)) n
-
-annoying-lemma {Γ , x} {X} {x₁} {fzero} = refl
-annoying-lemma {Γ , x} {X} {x₁} {fsucc n} =
-  begin
-    g (mon ⟦ id-σ {Γ , x , X} ⟧ₛ) x₁ (fsucc (fsucc n))
-  ≡⟨ refl-lemma-maybe {Γ , x} {X} {x₁} {fsucc n} ⟩
-    x₁ (fsucc (fsucc n))
-  ≡⟨ Eq.sym (refl-lemma-maybe {Γ} {x} {restrict-context x₁} {n = n}) ⟩
-    g (mon ⟦ id-σ {Γ , x} ⟧ₛ) (λ i → x₁ (fsucc i)) (fsucc n)
+    g (mon (⟦ `_ ⟧ₛ)) γ (fsucc i)
+  ≡⟨⟩
+    g (mon (⟦ weaken'-σ `_ ⟧ₛ)) γ i
+  ≡⟨ weaken'-σ-lemma `_ γ i ⟩
+    g (mon (⟦ `_ ⟧ₛ)) (restrict-context {Γ} γ) i
+  ≡⟨ lemma-55 {Γ} (restrict-context {Γ} γ) i ⟩
+    restrict-context {Γ} γ i
+  ≡⟨⟩
+    γ (fsucc i)
   ∎
 
-lemma-55′ : (Γ : Context) → ⟦ id-σ {Γ} ⟧ₛ ≡ id
-lemma-55-try-2 : (Γ : Context) → ∀ {x₁ : A (pos context-⟦ Γ ⟧) } {n : Fin (length Γ)}
-  → g (mon ⟦ id-σ {Γ} ⟧ₛ) x₁ n ≡ x₁ n
-
-
-lemma-55-try-2 (Γ , x) {n = fzero} = refl
-lemma-55-try-2 (Γ , x) {x₁} {fsucc n} =
-  begin
-    g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n)
-  ≡⟨ annoying-lemma {Γ} {x} {x₁} {n} ⟩
-    g (mon ⟦ id-σ ⟧ₛ) (λ i → x₁ (fsucc i)) n
-  ≡⟨ lemma-55-try-2 Γ {restrict-context x₁} {n} ⟩
-    x₁ (fsucc n)
-  ∎
-
-
-lemma-55′ ∅ = cont-fun-extensionality λ x → dependent-function-extensionality λ ()
-lemma-55′ (Γ , x) = cont-fun-extensionality (λ x₁ → dependent-function-extensionality (λ
-  { fzero → refl
-  ; (fsucc n) →
-    begin
-      g (mon ⟦ id-σ ⟧ₛ) x₁ (fsucc n)
-    ≡⟨ refl ⟩
-      g (mon ⟦ weaken-σ `_ ⟧ₛ ) x₁ n
-    ≡⟨ {!!} ⟩ 
-      x₁ (fsucc n)
-    ≡⟨ refl ⟩
-      g (mon (id {context-⟦ Γ , x ⟧})) x₁ (fsucc n)
-      ∎
-  }))
-
-lemma-55-key : {Γ : Context} {τ : Type} {x : A (pos context-⟦ Γ ⟧)} {n : Fin (length Γ)} {M : Γ ⊢ τ}
-  → g (mon ⟦ (σ {Γ} {τ} {M}) ⟧ₛ) x (fsucc n) ≡ x n
-
-lemma-55-key {Γ , x} {n = fzero} = refl
-lemma-55-key {Γ , x} {τ} {x = x₁} {fsucc n} {M} =
-  begin
-    {!!}
-  ≡⟨ {!lemma-55-key {?} {τ} {τ′} {?} {n} {M} {M′}!} ⟩
-    {!!}
-  ≡⟨ {!!} ⟩
-    {!!} 
-
-lemma-55′′ : {Γ : Context} {τ : Type} {M : Γ ⊢ τ}
-  → ⟦ weaken-σ (σ {Γ} {τ} {M}) ⟧ₛ ≡ id
-
-lemma-55′′ {∅} = cont-fun-extensionality (λ x → dependent-function-extensionality λ ())
-lemma-55′′ {Γ , X} {τ} {M} =
-  begin ⟦ weaken-σ (σ {Γ , X} {τ} {M}) ⟧ₛ ≡⟨ cont-fun-extensionality (λ x → dependent-function-extensionality (λ {fzero → refl; (fsucc n) →
-      begin
-        g (mon ⟦ weaken-σ (σ {Γ , X} {τ} {M}) ⟧ₛ) x (fsucc n)
-      ≡⟨ refl ⟩
-        g (mon ⟦ (σ {Γ , X} {τ} {M}) ⟧ₛ) x (fsucc (fsucc n))
-      ≡⟨ lemma-55-key {Γ , X} {τ} {x} {fsucc n} {M} ⟩
-        x (fsucc n)
-      ∎}))
-  ⟩ id
-  ∎ 
 
 lemma-55-corr : {Γ : Context} {τ τ′ : Type} {M : Γ ⊢ τ} {M′ : Γ , τ ⊢ τ′}
   → (⟦ Γ , τ ⊢′ M′ ⟧ ∘ ⟦ σ {Γ} {τ} {M} ⟧ₛ) ≡ (⟦ Γ , τ ⊢′ M′ ⟧ ∘ (concat ∘ pair-f id ⟦ Γ ⊢′ M ⟧))
@@ -407,7 +295,7 @@ lemma-55-corr {Γ} {τ} {τ′} {M} {M′} = cont-fun-extensionality
   (λ x → cong (λ z → (g (mon ⟦ Γ , τ ⊢′ M′ ⟧) z))
   (dependent-function-extensionality
     λ { fzero → refl
-      ; (fsucc n) → cong (λ z → (g (mon z)) x n) (lemma-55′′ {Γ} {τ} {M})
+      ; (fsucc n) → lemma-55 {Γ} x n
       }
   ))
 
@@ -587,3 +475,4 @@ soundness (β-is-zero₂ {M = M} x) =
    term-⟦ `false ⟧
  ∎
 -}
+
