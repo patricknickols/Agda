@@ -23,6 +23,73 @@ open domain
 open cont-fun
 open monotone-fun
 
+compositional-suc : {M₁ M₂ : ∅ ⊢ `ℕ} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ `suc M₁ ⟧ ≡ term-⟦ `suc M₂ ⟧
+compositional-pred : {M₁ M₂ : ∅ ⊢ `ℕ} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ `pred M₁ ⟧ ≡ term-⟦ `pred M₂ ⟧
+compositional-zero : {M₁ M₂ : ∅ ⊢ `ℕ} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ `is-zero M₁ ⟧ ≡ term-⟦ `is-zero M₂ ⟧
+--compositional-if-arg1 : {A : Type} {M₁ M₂ : ∅ ⊢ `bool} {X Y : ∅ ⊢ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ if M₁ then X else Y ⟧ ≡ term-⟦ if M₂ then X else Y ⟧
+--compositional-if-arg2 : {A : Type} {B : ∅ ⊢ `bool} {M₁ M₂ Y : ∅ ⊢ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ if B then M₁ else Y ⟧ ≡ term-⟦ if B then M₂ else Y ⟧
+--compositional-if-arg3 : {A : Type} {B : ∅ ⊢ `bool} {M₁ M₂ X : ∅ ⊢ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ if B then X else M₁ ⟧ ≡ term-⟦ if B then X else M₂ ⟧
+compositional-app1 : {A B : Type} {M₁ M₂ : ∅ ⊢ A ⇒ B} {X : ∅ ⊢ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ M₁ · X ⟧ ≡ term-⟦ M₂ · X ⟧
+compositional-app2 : {A B : Type} {F : ∅ ⊢ A ⇒ B} {M₁ M₂ : ∅ ⊢ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ F · M₁ ⟧ ≡ term-⟦ F · M₂ ⟧
+--compositional-fix : {A : Type} {M₁ M₂ : ∅ ⊢ A ⇒ A} → term-⟦ M₁ ⟧ ≡ term-⟦ M₂ ⟧ → term-⟦ μ M₁ ⟧ ≡ term-⟦ μ M₂ ⟧
+
+compositional-suc M₁≡M₂ = cong (λ f → s⊥ ∘ f) M₁≡M₂
+compositional-pred M₁≡M₂ = cong (λ f → p⊥ ∘ f) M₁≡M₂
+compositional-zero M₁≡M₂ = cong (λ f → z⊥ ∘ f) M₁≡M₂
+{-
+compositional-if-arg1 {A} {M₁} {M₂} {X} {Y} M₁≡M₂ =
+  begin
+    term-⟦ if M₁ then X else Y ⟧
+  ≡⟨⟩
+    if-cont ∘ pair-f term-⟦ M₁ ⟧ (pair-f term-⟦ X ⟧ term-⟦ Y ⟧)
+  ≡⟨ cong (λ f → if-cont ∘ pair-f f (pair-f term-⟦ X ⟧ term-⟦ Y ⟧)) M₁≡M₂ ⟩
+    if-cont ∘ pair-f term-⟦ M₂ ⟧ (pair-f term-⟦ X ⟧ term-⟦ Y ⟧)
+  ≡⟨⟩
+    term-⟦ if M₂ then X else Y ⟧
+  ∎
+compositional-if-arg2 {A} {B} {M₁} {M₂} {Y} M₁≡M₂ =
+  begin
+    term-⟦ if B then M₁ else Y ⟧
+  ≡⟨⟩
+    if-cont ∘ pair-f term-⟦ B ⟧ (pair-f term-⟦ M₁ ⟧ term-⟦ Y ⟧)
+  ≡⟨ cong (λ f → if-cont ∘ pair-f term-⟦ B ⟧ (pair-f f term-⟦ Y ⟧)) M₁≡M₂ ⟩
+    if-cont ∘ pair-f term-⟦ B ⟧ (pair-f term-⟦ M₂ ⟧ term-⟦ Y ⟧)
+  ≡⟨⟩
+    term-⟦ if B then M₂ else Y ⟧
+  ∎
+compositional-if-arg3 {A} {B} {M₁} {M₂} {X} M₁≡M₂ =
+  begin
+    term-⟦ if B then X else M₁ ⟧
+  ≡⟨⟩
+    if-cont ∘ pair-f term-⟦ B ⟧ (pair-f term-⟦ X ⟧ term-⟦ M₁ ⟧)
+  ≡⟨ cong (λ f → if-cont ∘ pair-f term-⟦ B ⟧ (pair-f term-⟦ X ⟧ f)) M₁≡M₂ ⟩
+    if-cont ∘ pair-f term-⟦ B ⟧ (pair-f term-⟦ X ⟧ term-⟦ M₂ ⟧)
+  ≡⟨⟩
+    term-⟦ if B then X else M₂ ⟧
+  ∎
+-}
+compositional-app1 {A} {B} {M₁} {M₂} {X} M₁≡M₂ =
+  begin
+    term-⟦ M₁ · X ⟧
+  ≡⟨⟩
+    ev-cont ∘ pair-f term-⟦ M₁ ⟧ term-⟦ X ⟧
+  ≡⟨ cong (λ f → ev-cont ∘ pair-f f term-⟦ X ⟧) M₁≡M₂ ⟩
+    ev-cont ∘ pair-f term-⟦ M₂ ⟧ term-⟦ X ⟧
+  ≡⟨⟩
+    term-⟦ M₂ · X ⟧
+  ∎
+compositional-app2 {A} {B} {F} {M₁} {M₂} M₁≡M₂ =
+  begin
+    term-⟦ F · M₁ ⟧
+  ≡⟨⟩
+    ev-cont ∘ pair-f term-⟦ F ⟧ term-⟦ M₁ ⟧
+  ≡⟨ cong (λ f → ev-cont ∘ pair-f term-⟦ F ⟧ f) M₁≡M₂ ⟩
+    ev-cont ∘ pair-f term-⟦ F ⟧ term-⟦ M₂ ⟧
+  ≡⟨⟩
+    term-⟦ F · M₂ ⟧
+  ∎
+--compositional-fix M₁≡M₂ = cong (λ f → tarski-continuous ∘ f) M₁≡M₂
+
 
 comm-triangle : {Γ Δ : Context} {τ : Type} (t : Γ ⊢ τ) → (σ : {A : Type} → Γ ∋ A → Δ ⊢ A)
   → ⟦ Δ ⊢′ subst σ t ⟧ ≡ ⟦ Γ ⊢′ t ⟧ ∘ ⟦ σ ⟧ₛ
