@@ -473,6 +473,48 @@ suc-val-inversion (V-suc x) = x
 ⇓-cbn ⟨ M₁-→*ƛM₁′ , val-ƛM₁′ ⟩ ⟨ M₁′[M₂]-→*V , val-v ⟩ = ⟨ trans-→* (trans-→* (cong-app M₁-→*ƛM₁′) (single β-ƛ)) M₁′[M₂]-→*V , val-v ⟩
 ⇓-fix ⟨ MμM-→*V , val-v ⟩ = ⟨ fix-inversion MμM-→*V , val-v ⟩
 
+
+add : ∀ {Γ} → Γ ⊢ `ℕ ⇒ `ℕ ⇒ `ℕ
+add = μ (ƛ (ƛ (ƛ (if `is-zero (` Z) then ` S Z else (` (S S Z) · `suc ` S Z · (`pred (` Z)))))))
+
+times : ∀ {Γ} → Γ ⊢ `ℕ ⇒ `ℕ ⇒ `ℕ
+times = μ (ƛ (ƛ (ƛ (if `is-zero (` Z) then `zero else (add · ` S Z · (` S S Z · ` S Z · (`pred (` Z))))))))
+
+factorial : ∀ {Γ} → Γ ⊢ `ℕ ⇒ `ℕ
+factorial = μ (ƛ (ƛ (if `is-zero (` Z) then (`suc `zero) else (times · ` Z · (` S Z · (`pred (` Z)))))))
+
+
+record Gas : Set where
+  constructor gas
+  field
+    amount : ℕ
+
+data Finished {Γ : Context} {τ : Type} (V : Γ ⊢ τ) : Set where
+  done :
+      Value V
+    → Finished V
+
+  out-of-gas :
+    Finished V
+
+data Steps {Γ : Context} {τ : Type} (M : Γ ⊢ τ) : Set where
+  steps : ∀ {N}
+    → M -→* N
+    → Finished N
+    → Steps M
+
+eval : ∀ {A} → Gas → (L : ∅ ⊢ A) → Steps L
+eval (gas zero) L = steps refl-→* out-of-gas
+eval (gas (suc m)) L with progress L
+... | done VL = steps refl-→* (done VL)
+... | step {N} L-→N with eval (gas m) N
+...     | steps N-→*V fin = steps (trans-→* (single L-→N) N-→*V) fin
+
+_ : eval (gas 1000) (factorial · (`suc (`suc (`suc (`zero))))) ≡ {!!}
+_ = refl
+
+--fact⇓120 : (∅ ⊢ (μ (ƛ (ƛ (if (`is-zero `Z) then (`suc `zero) else (` (S Z)
+
 --⟦ μ (ƛ (`suc (# fzero))) ⟧-program ≡ ⊥₁
 --⟦ μ (ƛ (`pred (# fzero))) ⟧-program ≡ inj zero
 --g (mon (⟦ μ (ƛ_ {A = `ℕ ⇒ `ℕ } (ƛ_  {A = `ℕ} (if (`is-zero (# fzero)) then (`suc `zero) else (# (fsucc fzero) · (`pred (# fzero)))))) ⟧-program))
