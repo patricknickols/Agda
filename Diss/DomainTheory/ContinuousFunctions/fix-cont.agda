@@ -8,6 +8,7 @@ open Eq.≡-Reasoning
 open Eq using (_≡_; cong)
 
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
+open import Data.Nat using (ℕ; suc; zero)
 open import misc
 
 open poset
@@ -120,4 +121,24 @@ tarski-lub-preserve P c = lub-preserve (remark-237 ((function-domain P P)) P c (
 tarski-continuous {P} = record { mon = tarski-mon P
                                ; lub-preserve = tarski-lub-preserve P
                                }
+
+
+scott-induction : {D : domain}
+  → (f : cont-fun D D) (P : A (pos D) → Set)
+  → P (⊥ (bottom D))
+  → ({n : ℕ} → (P (iterate n (g (mon f)) (⊥ (bottom D)))) → P (iterate (suc n) (g (mon f)) (⊥ (bottom D))))
+  → ((c : chain (pos D)) → ((n : ℕ) → (P (g c n))) → P (⊔ (chain-complete D c)))
+  → P (g (tarski-mon D) f)
+
+scott-induction-1 : {D : domain}
+  → (f : cont-fun D D) (P : A (pos D) → Set)
+  → P (⊥ (bottom D))
+  → ({n : ℕ} → (P (iterate n (g (mon f)) (⊥ (bottom D)))) → P (iterate (suc n) (g (mon f)) (⊥ (bottom D))))
+  → ((n : ℕ) → P (iterate n (g (mon f)) (⊥ (bottom D))))
+
+scott-induction-1 f P P⊥ induction zero = P⊥
+scott-induction-1 f P P⊥ induction (suc n) = induction {n} (scott-induction-1 f P P⊥ (λ {n} → induction {n}) n)
+
+scott-induction {D} f P P⊥ induction chain-closed = chain-closed (tarski-chain-of-fⁿ⊥ D f) (scott-induction-1 f P P⊥ λ {n} → induction {n})
+
 
