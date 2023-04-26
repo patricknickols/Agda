@@ -108,15 +108,11 @@ length : Context → ℕ
 length ∅ = zero
 length (Γ , _) = suc (length Γ)
 
-lookup : {Γ : Context} → {n : ℕ} → (p : n < length Γ) → Type
-lookup {(_ , A)} {zero} (s≤s z≤n) = A
-lookup {(Γ , _)} {suc n} (s≤s p) = lookup p
+lookup : {Γ : Context} → (n : Fin (length Γ)) → Type
+lookup {(_ , A)} (fzero) = A
+lookup {(Γ , _)} (fsucc x) = lookup {Γ} x
 
-lookup₂ : {Γ : Context} → (n : Fin (length Γ)) → Type
-lookup₂ {(_ , A)} (fzero) = A
-lookup₂ {(Γ , _)} (fsucc x) = lookup₂ {Γ} x
-
-count : ∀ {Γ} → {n : Fin (length Γ)} → Γ ∋ lookup₂ {Γ} n
+count : ∀ {Γ} → {n : Fin (length Γ)} → Γ ∋ lookup {Γ} n
 count {Γ , x} {fzero} = Z
 count {Γ , x} {fsucc n} = S (count {Γ} {n})
 
@@ -124,11 +120,7 @@ conv : ∀ {x} → {Γ : Context} → (Γ ∋ x) → Fin (length Γ)
 conv Z = fzero
 conv (S Γ∋x) = fsucc (conv Γ∋x)
 
-conv₂ : {y : ℕ} (x : ℕ) → x < y → Fin y
-conv₂ zero (s≤s x<y) = fzero
-conv₂ (suc x) (s≤s x<y) = fsucc (conv₂ x x<y) 
-
-#_ : ∀ {Γ} → (n : Fin (length Γ)) → Γ ⊢ lookup₂ n
+#_ : ∀ {Γ} → (n : Fin (length Γ)) → Γ ⊢ lookup n
 #_ n = ` (count {n = n}) 
 
 ext : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ∋ A) → (∀ {A B} → Γ , B ∋ A → Δ , B ∋ A)
@@ -293,7 +285,7 @@ progress (μ M) = step β-μ
 ⟦ τ ⇒ τ′ ⟧ = function-domain ⟦ τ ⟧ ⟦ τ′ ⟧
 
 context-⟦_⟧ : Context → domain
-context-⟦ Γ ⟧ = domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup₂ {Γ} x ⟧)
+context-⟦ Γ ⟧ = domain-dependent-product (Fin (length Γ)) (λ x → ⟦ lookup {Γ} x ⟧)
 
 unconcat : {Γ : Context} {τ : Type} → cont-fun context-⟦ Γ , τ ⟧ (domain-product context-⟦ Γ ⟧ ⟦ τ ⟧)
 g (mon unconcat) x (fzero) i = x (fsucc i)
@@ -368,9 +360,9 @@ constant-fun B b = constant-fun-is-cont b
 
 project-x′ : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
                                                 (domain-dependent-product (Fin (length Γ))
-                                                  (λ x → ⟦ lookup₂ {Γ} x ⟧))
-                                                ⟦ lookup₂ (conv Γ∋x) ⟧
-project-x′ {x} Γ Γ∋x =  domain-dependent-projection (Fin (length Γ)) (λ x → ⟦ lookup₂ x ⟧) (conv Γ∋x)
+                                                  (λ x → ⟦ lookup {Γ} x ⟧))
+                                                ⟦ lookup (conv Γ∋x) ⟧
+project-x′ {x} Γ Γ∋x =  domain-dependent-projection (Fin (length Γ)) (λ x → ⟦ lookup x ⟧) (conv Γ∋x)
 {-
 project-x-lemma : ∀ {x} → {Γ : Context} → (Γ∋x : Γ ∋ x) → lookup₂ (conv Γ∋x) ≡ x
 project-x-lemma Z = refl
@@ -378,7 +370,7 @@ project-x-lemma (S Γ∋x) = project-x-lemma Γ∋x
 -}
 project-x : ∀ {x} → (Γ : Context) → (Γ∋x : Γ ∋ x) → cont-fun
                                                 (domain-dependent-product (Fin (length Γ))
-                                                  (λ x → ⟦ lookup₂ {Γ} x ⟧))
+                                                  (λ x → ⟦ lookup {Γ} x ⟧))
                                                 ⟦ x ⟧
 --project-x Γ Γ∋x rewrite Eq.sym (project-x-lemma Γ∋x) = project-x′ Γ Γ∋x
 
@@ -407,6 +399,79 @@ project-x (Γ , τ) (S Γ∋x) = project-x Γ Γ∋x ∘ restrict-context-cont
 zero-right : ⟦ `zero ⟧-program ≡ (inj zero)
 zero-right = refl
 
+
+data _-→*_ : ∀ {Γ} {A} → Γ ⊢ A → Γ ⊢ A → Set where
+  refl-→* : ∀ {Γ} {A}
+    → {t : Γ ⊢ A}
+    → t -→* t
+  single : ∀ {Γ} {A}
+    → {t  : Γ ⊢ A}
+    → {t′ : Γ ⊢ A}
+    → t —→ t′
+    → t -→* t′
+  trans-→* : ∀ {Γ} {A}
+    → {t  : Γ ⊢ A}
+    → {t′ : Γ ⊢ A}
+    → {t″ : Γ ⊢ A}
+    → (t -→* t′)
+    → (t′ -→* t″)
+    → (t -→* t″)
+
+_⇓_ : ∀ {Γ} {A} → (M : Γ ⊢ A) → (V : Γ ⊢ A) → Set
+M ⇓ V = M -→* V × Value V 
+
+cong-suc : ∀ {Γ} {M V : Γ ⊢ `ℕ} → M -→* V → (`suc M) -→* (`suc V)
+cong-suc refl-→* = refl-→*
+cong-suc (single x) = single (ξ-suc x)
+cong-suc (trans-→* x y) = trans-→* (cong-suc x) (cong-suc y)
+
+cong-pred : ∀ {Γ} {M V : Γ ⊢ `ℕ} → M -→* V → (`pred M) -→* (`pred V)
+cong-pred refl-→* = refl-→*
+cong-pred (single x) = single (ξ-pred x)
+cong-pred (trans-→* x y) = trans-→* (cong-pred x) (cong-pred y)
+
+cong-zero : ∀ {Γ} {M V : Γ ⊢ `ℕ} → M -→* V → (`is-zero M) -→* (`is-zero V)
+cong-zero refl-→* = refl-→*
+cong-zero (single x) = single (ξ-is-zero x)
+cong-zero (trans-→* x y) = trans-→* (cong-zero x) (cong-zero y)
+
+cong-if : ∀ {Γ} {τ} {M V : Γ ⊢ `bool} {N N′ : Γ ⊢ τ} → M -→* V → (if M then N else N′) -→* (if V then N else N′)
+cong-if refl-→* = refl-→*
+cong-if (single x) = single (ξ-if x)
+cong-if (trans-→* x y) = trans-→* (cong-if x) (cong-if y)
+
+cong-app : ∀ {Γ} {A} {B} {M V : Γ ⊢ A ⇒ B} {N : Γ ⊢ A} → M -→* V → (M · N) -→* (V · N)
+cong-app refl-→* = refl-→*
+cong-app (single x) = single (ξ-·₁ x)
+cong-app (trans-→* x y) = trans-→* (cong-app x) (cong-app y)
+
+fix-inversion : ∀ {Γ} {A} {M : Γ ⊢ A ⇒ A} {V : Γ ⊢ A} → (M · (μ M)) -→* V → (μ M) -→* V
+fix-inversion refl-→* = trans-→* (single β-μ) (refl-→*)
+fix-inversion (single x) = trans-→* (single β-μ) (single x)
+fix-inversion (trans-→* x y) = trans-→* (single β-μ) (trans-→* x y)
+
+suc-val-inversion : ∀ {Γ} {V : Γ ⊢ `ℕ} → Value (`suc V) → Value V
+suc-val-inversion (V-suc x) = x
+
+⇓-Val : ∀ {Γ} {A} {V : Γ ⊢ A} → Value V → V ⇓ V
+⇓-succ : ∀ {Γ} {M : Γ ⊢ `ℕ} {V : Γ ⊢ `ℕ} → M ⇓ V → (`suc M) ⇓ (`suc V)
+⇓-pred : ∀ {Γ} {M : Γ ⊢ `ℕ} {V : Γ ⊢ `ℕ} → M ⇓ (`suc V) → (`pred M) ⇓ V
+⇓-zero₁ : ∀ {Γ} {M : Γ ⊢ `ℕ} → M ⇓ `zero → (`is-zero M) ⇓ `true
+⇓-zero₂ : ∀ {Γ} {M : Γ ⊢ `ℕ} {V : Γ ⊢ `ℕ} → M ⇓ (`suc V) → (`is-zero M) ⇓ `false
+⇓-if₁ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `true → M₂ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
+⇓-if₂ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `false → M₃ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
+⇓-cbn : ∀ {Γ} {A} {B} {M₁ : Γ ⊢ A ⇒ B} {M₁′ : Γ , A ⊢ B} {M₂ : Γ ⊢ A} {V : Γ ⊢ B} → M₁ ⇓ (ƛ M₁′) → (M₁′ [ M₂ ]) ⇓ V → (M₁ · M₂) ⇓ V 
+⇓-fix : ∀ {Γ} {A} {M : Γ ⊢ A ⇒ A} {V : Γ ⊢ A} → (M · (μ M)) ⇓ V → (μ M) ⇓ V
+
+⇓-Val val-v = ⟨ refl-→* , val-v ⟩
+⇓-succ ⟨ M-→*V , val-v ⟩ = ⟨ cong-suc M-→*V , V-suc val-v ⟩
+⇓-pred ⟨ M-→*sucV , val-sucV ⟩ = ⟨ trans-→* (cong-pred M-→*sucV) (single (β-pred₂ (suc-val-inversion val-sucV))) , suc-val-inversion val-sucV ⟩
+⇓-zero₁ ⟨ M-→*0 , _ ⟩ = ⟨ trans-→* (cong-zero M-→*0) (single β-is-zero₁) , V-true ⟩
+⇓-zero₂ ⟨ M-→*sucV , val-sucV ⟩ = ⟨ trans-→* (cong-zero M-→*sucV) (single (β-is-zero₂ (suc-val-inversion val-sucV))) , V-false ⟩
+⇓-if₁ ⟨ M₁-→*true , _ ⟩ ⟨ M₂-→*V , val-v ⟩ = ⟨ trans-→* (trans-→* (cong-if M₁-→*true) (single β-if₁)) M₂-→*V , val-v ⟩
+⇓-if₂ ⟨ M₁-→*false , _ ⟩ ⟨ M₃-→*V , val-v ⟩ = ⟨ trans-→* (trans-→* (cong-if M₁-→*false) (single β-if₂)) M₃-→*V , val-v ⟩
+⇓-cbn ⟨ M₁-→*ƛM₁′ , val-ƛM₁′ ⟩ ⟨ M₁′[M₂]-→*V , val-v ⟩ = ⟨ trans-→* (trans-→* (cong-app M₁-→*ƛM₁′) (single β-ƛ)) M₁′[M₂]-→*V , val-v ⟩
+⇓-fix ⟨ MμM-→*V , val-v ⟩ = ⟨ fix-inversion MμM-→*V , val-v ⟩
 
 --⟦ μ (ƛ (`suc (# fzero))) ⟧-program ≡ ⊥₁
 --⟦ μ (ƛ (`pred (# fzero))) ⟧-program ≡ inj zero
