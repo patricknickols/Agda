@@ -510,10 +510,6 @@ eval (gas (suc m)) L with progress L
 ... | step {N} L-→N with eval (gas m) N
 ...     | steps N-→*V fin = steps (trans-→* (single L-→N) N-→*V) fin
 
-_ : eval (gas 1000) (factorial · (`suc (`suc (`suc (`zero))))) ≡ {!!}
-_ = refl
-
---fact⇓120 : (∅ ⊢ (μ (ƛ (ƛ (if (`is-zero `Z) then (`suc `zero) else (` (S Z)
 
 --⟦ μ (ƛ (`suc (# fzero))) ⟧-program ≡ ⊥₁
 --⟦ μ (ƛ (`pred (# fzero))) ⟧-program ≡ inj zero
