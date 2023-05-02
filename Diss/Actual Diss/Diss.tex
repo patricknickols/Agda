@@ -3,6 +3,7 @@
 
 \usepackage{My_style}
 \usepackage{dirtree}
+\usepackage{multicol}
 \usepackage{minted}
 \usepackage[pdfborder={0 0 0}]{hyperref}    % turns references into hyperlinks
 \usepackage[margin=25mm]{geometry}  % adjusts page layout
@@ -314,24 +315,22 @@ The corresponding Agda code looks as follows:
 record poset (D : Set) (_⊑_ : D → D → Set) : Set where
   field
     reflexive     : ∀ {d : D} → d ⊑ d 
-    transitive    : ∀ {d d′ d″ : D} → (d ⊑ d′) → (d′ ⊑ d″) → (d ⊑ d″)
+    transitive    : ∀ {d d′ d'' : D} → (d ⊑ d′) → (d′ ⊑ d'') → (d ⊑ d'')
     antisymmetric : ∀ {d d′ : D} → (d ⊑ d′) → (d′ ⊑ d) → d ≡ d′
 \end{minted}
 This similarity was a key aim of my project. One of the main benefits of proof formalisation is that it massively narrows what one must trust (Cite/footnote talia ringer). To know that my Agda code is correct, one doesn't need to take it on faith, only that Agda's type-checker itself is correct. With that assumption, the code's correctness follows logically from the fact it type checks. However, this sounds very convenient, but it is very easy to prove things in Agda that are true, but not what you are trying to prove, or to be unable to prove things that are true. Therefore, to properly understand what it is that code is trying to prove and whether it succeeds, it is not only important that one's code type-checks, but also that it can be visibly seen to have type signatures corresponding to the intended theorems. 
 
 For example, I may try to prove that all posets have a least element\footnote{This example is not a theorem. For example, the integers under the normal ordering relation do not have a least element.} and I may conceivably create a function in Agda whose type signature is:
 \begin{minted}{agda}
-poset-least-element : {P⊑ : poset P ⊑} → least-element P
+poset-least-element : {P : Set} {⊑ : P → P → Set} (P⊑ : poset P ⊑) → least-element P
 \end{minted}
 That is a function which takes a poset (with underlying set P and relation ⊑) and returns a least element of P. Since in Agda all functions terminate and are total, the function corresponding to this type signature (if it typchecks) is a proof that all posets have least elements.
 
-But, the important point here has a symmetry with the point of denotational semantics. The map is not the territory (Footnote) and the \texttt{least-element} record defined in Agda may not accurately represent what a least element of a set really is. So, knowing that code type checks and thus that theorems' proofs are valid in Agda, is only good in so far as one trusts that the objects in question are encoded correctly. This corresponds to the difference between verification (checking that an object matches its formal specification) and validation (checking that a formal specification matches what is actually desired). The typechecker can handle verification, but it is up to the Agda programmer to try to make validation doable by eye. 
+But, the important point here has a symmetry with the point of denotational semantics. The map is not the territory and the \texttt{least-element} record defined in Agda may not accurately represent what a least element of a set really is. So, knowing that code type checks and thus that theorems' proofs are valid in Agda, is only good in so far as one trusts that the objects in question are encoded correctly. This corresponds to the difference between verification (checking that an object matches its formal specification) and validation (checking that a formal specification matches what is actually desired). The typechecker can handle verification, but it is up to the Agda programmer to try to make validation doable by eye. 
 
 It was thus a key aim of my project to encode the objects not just correctly but obviously so, as far as possible: the closer to the course's definitions (both in content and notation), the more confident the reader can be that the \texttt{poset} in my code is the same as in the lectures and the wider study of posets. 
 
-This is not as straightforward as it sounds however, as this task directly clashes with the process of formalisation. Often the representation chosen in lectures for ease of student understanding is not as easy to work with and may lead to later difficulties. Thus, while the following page (INCLUDE IMAGES) has comparisons of the course's definitions of objects and the straightforward way to try to mimic these, they are not actually (in all cases) the definitions I eventually settled on. 
-
-To try to illustrate the range of ways of representing things, both in Agda, and mathematically, there will be two case studies, I will highlight both chains and posets, but note that for most objects, similar thoughts and issues arise. 
+This is not as straightforward as it sounds however, as this task directly clashes with the process of formalisation. Often the representation chosen in lectures for ease of student understanding is not as easy to work with and may lead to later difficulties. To try to illustrate the range of ways of representing things, both in Agda, and mathematically, there will be two case studies, I will highlight both chains and posets, but note that for most objects, similar thoughts and issues arise. 
 \subsubsection{Posets}
 A poset is defined in the course\footnote{and everywhere else, this is a well-agreed-upon term. C.f. ``domain" or ``PCF" which differ in definition depending on author.} as a set, a relation on that set and some properties of that relation. Agda's basic syntax for defining novel types has two options. One can define a datatype with corresponding constructors (similar to ML-derived languages), or one can define records. Records are simply product types with named fields, each of which has its own type. 
 
@@ -356,7 +355,6 @@ record partial-order (A : Set) : Set where
     reflexive     : ∀ {d : D} → d ⊑ d 
     transitive    : ∀ {d d′ d″ : D} → (d ⊑ d′) → (d′ ⊑ d″) → (d ⊑ d″)
     antisymmetric : ∀ {d d′ : D} → (d ⊑ d′) → (d′ ⊑ d) → d ≡ d′
-
 record poset : Set where
   field
     A  : Set
@@ -367,7 +365,9 @@ These choices may seem relatively inconsequential, but indeed not only do such c
 
 Thus, if we wish to quantify over all posets, we need to first quantify over all sets, all corresponding relations, and then over all posets with the bound set variable, and bound relation variable. This approach does not seem too harmful at first, but quickly becomes almost insurmountable if one chooses to follow it. The interested reader is invited to (CITE OLD COMMIT) where one can see my code which originally took this approach. The theorems I wished to prove quickly became difficult to even provide the type signature for, let alone the actual proofs. For example, in an ideal world, to provide a type signature for a fixpoint operator that takes a function, and returns its least prefixed point, one might hope to write:
 \begin{minted}{agda}
-fixpoint : (A : domain) → (f : A → A) → continuous-function f → least-pre-fixed f
+fixpoint : (A : domain) → (f : A → A) 
+  → continuous-function f 
+  → least-pre-fixed f
 \end{minted}
 or even just:
 \begin{minted}{agda}
@@ -392,94 +392,8 @@ A chain\footnote{as typically presented, not as in the course} is a subset of a 
 Along with posets comes their basic structure-preserving maps: monotone functions (a function where $x \leq y$ implies $f x \leq f y$ (where $\leq$ is overloaded, and is standing in for two different relations on potentially two different sets)). Thus, a natural choice in my case dealing only with posets (and richer structures built on top of them) is to treat chains as monotone functions, from the naturals to a poset. This turns out to work, and indeed from my experience seems to work better than other choices, but it is certainly not obvious a priori whether that will be the case.
 
 This a priori uncertainty, and necessity of immediately choosing an encoding, is one of the main difficulties of formalising some parts of mathematics. In much the same way that many linear algebra problems are simplified by avoiding a basis\footnote{This particular idea I first saw on Quora, said by Senia Sheydvasser: \texttt{https://www.quora.com/Why-is-the-Jordan-canonical-form-so-important}}, many problems are easer to reason about on pen and paper without specifying the encoding accompanying them. Noone who wishes to compute $\sqrt{2} + \sqrt{3}$ would want to first choose whether they were using the Cauchy-sequence representation or the Dedekind-cut based representation. 
-\subsection{The course descriptions and the actual interpretations}
-With that said, the following shows for the main objects of domain theory the definition in the lecture notes and the definition I eventually went with. These definitions are the content of \texttt{posets-etc.agda}. Note that throughout this dissertation, code may be reformatted from what is actually in the repository in order to highlight the important ideas and ignore technical details that may not be relevant to the point being made. In particular, we often remove projecting fields from records, allowing us to write more like mathematicians (i.e. treating the poset \texttt{P} as having underlying set \texttt{P}, rather than projecting out the underlying set). 
-\begin{itemize}
-\item We have already seen the course's definition of posets and the corresponding ``copy" in Agda. The definition I eventually went with was the unparametrised one in which all information is in fields. 
-\begin{minted}{agda}
-record poset : Set₁ where
-  field
-    A : Set
-    R : A → A → Set
-    reflexive     : ∀ {d : D} → d ⊑ d 
-    transitive    : ∀ {d d′ d″ : D} → (d ⊑ d′) → (d′ ⊑ d″) → (d ⊑ d″)
-    antisymmetric : ∀ {d d′ : D} → (d ⊑ d′) → (d′ ⊑ d) → d ≡ d′
-\end{minted}
-\item The course defines a monotone function as follows: . The most natural reflection of this definition is:
-\begin{minted}{agda}
-record monotone-fun (P : poset) (Q : poset) : Set where
-  field
-    g : A P → A Q
-    mon : ∀ {a a′ : A P} → (R P) a a′ → (R Q) (g a) (g a′)
-\end{minted}
-\item As previously discussed, I define a chain as a monotone function from the naturals (under their usual ordering, which we must show is a poset for this to be a meaningful definition). I call this poset \texttt{nats}.
-\begin{minted}{agda}
-chain P≤ = monotone-fun nats P≤
-\end{minted}
-The course, somewhat similarly, defines it as a sequence of elements of a poset $d_n$ satisfying $d_0 \leq d_1 \leq d_2 \leq \hdots$. This is obviously slightly informal, but my definition seems to correspond as closely as possible to that.
-\item
-The course defines least upper bounds as satisfying two properties: (lub1) and (lub2). This would correspond to the definition: . I use the definition:
-\begin{minted}{agda}
-record lub {P⊑ : poset} (c : chain P⊑) : Set where
-  private P : Set
-  P = A P⊑
-  private _⊑_ : P → P → Set
-  _⊑_ = R P⊑
-  private f : ℕ → P
-  f = g c
-  field
-    ⊔ : P
-    lub1 : ∀ {n : ℕ} → f n ⊑ ⊔
-    lub2 : ∀ {d′ : P} → (∀ {n : ℕ} → f n ⊑ d′) → ⊔ ⊑ d′
-\end{minted}
-\item
-The course defines domains as chain-complete elements with least elements. This would correspond to the definition: . I use the definition: 
-\begin{minted}{agda}
-record domain : Set₁ where
-  field
-    pos : poset
-    chain-complete : ∀ (c : chain pos) → lub c
-    bottom : least-element pos
-\end{minted}
-where I define
-\begin{minted}{agda}
-record least-element (P⊑ : poset) : Set where
-  private P : Set
-  P = A P⊑
-  private _⊑_ : P → P → Set
-  _⊑_ = R P⊑
-  field
-    ⊥ : P
-    ⊥-is-bottom : ∀ {a : P} → ⊥ ⊑ a
-\end{minted}
-\item The course defines continuous functions as: . I use the definition
-\begin{minted}{agda}
-record cont-fun (P P′ : domain) : Set where
-  field
-    mon : monotone-fun (pos P) (pos P′)
-    lub-preserve : (c : chain (pos P))
-      → let f = (g mon) in
-        let ⊔dₙ = (⊔ (chain-complete P c)) in
-        let ⊔fdₙ = ⊔ (chain-complete P′ (chain-map c mon)) in
-        f ⊔dₙ ≡ ⊔fdₙ
-\end{minted}
-This requires proving that applying a monotone function to every element in a chain yields another chain, a proof and function that we call \texttt{chain-map}. 
-\item The course defines a prefixed point as: . I use the definition
-\begin{minted}{agda}
-record pre-fixed (P≤ : poset) (f : A P≤ → A P≤) : Set where
-  field
-    d : A P≤
-    pre-fix : (R P≤) (f d) d
-\end{minted}
-\item Finally, the course defines a least prefixed point as: . I use the definition
-\begin{minted}{agda}
-record least-pre-fixed (P≤ : poset) (f : A P≤ → A P≤) : Set where
-  field
-    lfp1 : pre-fixed P≤ f
-    lfp2 : ∀ {d′ : A P≤} → (R P≤) (f d′) d′ → (R P≤) (d lfp1) d′
-\end{minted}
-\end{itemize}
-\subsection{Commentary}
+
+The definitions of other objects which require similar choices are the content of \texttt{posets-etc.agda}. Note that throughout this dissertation, code may be reformatted from what is actually in the repository in order to highlight the important ideas and ignore technical details that may not be relevant to the point being made. In particular, we often remove projecting fields from records, allowing us to write more like mathematicians (i.e. treating the poset \texttt{P} as having underlying set \texttt{P}, rather than projecting out the underlying set). 
 \section{Domain theory theorems}
 \subsection{Useful tools}
 The early part of the course is full of results that seem to be demonstrations of how to use the definitions we have learnt, moreso than particularly useful theorems. However, some turn out to be critically important in later results. I here mention a couple, noting particularly a result that is later important, and a result that seems trivial but is difficult to prove. These are found in the \texttt{BasicObjects.theorems} module.
@@ -551,11 +465,7 @@ The \texttt{lub2} field is a proof that $\sqcup$ is a least upper bound, not jus
 
 Our proof shows that the $\sqcup$ field is equal to \texttt{g c (index (flat-domain-chain-eventually-constant c))}, i.e. the \texttt{index}'th element of the chain. It then applies the hypothesis \texttt{x} (that \texttt{d′} is an upper bound) and a kind of transitivity\footnote{Here we use a function that takes a proof that $a \equiv b$ and a proof that $b \leq c$ and returns a proof that $a \leq c$.} to conclude that $\sqcup$ is below \texttt{d′} as required. 
 \begin{minted}{agda}
-lub2 (chain-complete-flat-dom {A} c) {d′} x = a≡b≤c→a≤c
-  {B⊥ A}
-  {R (flat-domain-pos A)}
-  {eventual-val (flat-domain-chain-eventually-constant c)}
-  {g c (index (flat-domain-chain-eventually-constant c))} {d′}
+lub2 (chain-complete-flat-dom c) x = a≡b≤c→a≤c
   (Eq.sym (eventually-val (flat-domain-chain-eventually-constant c) refl-≤))
   ub-d′
 \end{minted}
@@ -597,55 +507,7 @@ diagonalising-lemma P double-index-fun = Eq.trans
   (diagonalising-lemma-1 P double-index-fun) 
   (Eq.sym (diagonalising-lemma-2 P double-index-fun))
 \end{minted}
-We use \texttt{Eq.sym} to turn a proof that $a\equiv b$ to a proof that $b \equiv a$. Thus, the meat of the problem is providing the function body for \texttt{diagonalising-lemma-1} and \texttt{diagonalising-lemma-2}. Each is not hard to prove, but neither is trivial. We present and explain here only the proof of \texttt{diagonalising-lemma-2}: this corresponds to
-\[
-\bigsqcup_{m\geq 0} \left( \bigsqcup_{n\geq 0} d_{m,n} \right) = \bigsqcup_{k \geq 0} d_{k, k}.
-\]
-Our proof goes by antisymmetry of the underlying partial order. We thus need to show that
-\begin{equation} \label{anti-sym1}
-\bigsqcup_{m \geq 0} \left( \bigsqcup_{n\geq 0} d_{m,n} \right) \leq \bigsqcup_{k \geq 0} d_{k, k}
-\end{equation}
-and
-\begin{equation} \label{anti-sym2}
-\bigsqcup_{k \geq 0} d_{k, k} \leq \bigsqcup_{m \geq 0} \left( \bigsqcup_{n\geq 0} d_{m,n} \right) .
-\end{equation}
-We first tackle \ref{anti-sym1} using the universal property of lubs, (aka \texttt{lub2}) which states that a least upper bound is less than or equal to any other upper bound. So it suffices to show that 
-\[
-\bigsqcup_{k \geq 0} d_{k, k} 
-\]
-is an upper bound, that is
-\[
-\forall m \geq 0. \left( \bigsqcup_{n\geq 0} d_{m,n} \right) \leq \bigsqcup_{k \geq 0} d_{k, k}.
-\]
-We take an arbitrary $m$, and then again we wish to show that a lub is less than something else. We thus use \texttt{lub2} again, so it suffices to show that
-\[
-\forall n \geq 0. d_{m, n} \leq \bigsqcup_{k \geq 0} d_{k , k}.
-\]
-We do this using a lemma that shows transitively that $d_{m,n} \leq d_{\text{max}(m,n), \text{max}(m,n)} \leq \sqcup d_{k,k}$ where the first inequality is by monotonicity and the final inequality is shown using the property \texttt{lub1}. 
-
-Our work is not done (and hopefully now we are starting to see the annoyance of being explicit about every detail mathematically), as we need to show the other half of the antisymmetry, inequality \ref{anti-sym2}. This however is easier. We can use \texttt{lub2} again, so we really only need to show that
-\[
-\forall k \geq 0. d_{k,k} \leq \bigsqcup_{m \geq 0} \left( \bigsqcup_{n\geq 0} d_{m,n} \right).
-\]
-We do this by transitivity. We show $d_{k,k} \leq \sqcup_{m \geq 0} d_{m,k} \leq \sqcup \sqcup d_{m,n}$ where both inequalities hold by straightforward applications of \texttt{lub1}. That was a frustatingly long and verbose proof in words, in comparison to a few lines in the course notes (IS THERE A GOOD WAY TO CITE A SPECIFIC PAGE OR SHOULD I NOT BOTHER?). In addition, even that description is not sufficient to account for all the code\footnote{This verbosity is one reason some may find Agda's lack of tactics unsatisfying. Other Curry--Howard based proof-assistants support writing simpler code that expands to longer code using tactics, however it is often much harder to parse for a reader, although shorter.}, since the code relies upon a few functions\footnote{Namely, \texttt{chain-⊔fₖₙ-with-n-fixed} and \texttt{chain-fₘₙ-with-n-fixed}.} that are not explained; proofs that the chains involved in the manipulations are valid chains. 
-
-The corresponding Agda code is:
-\begin{minted}{agda}
-diagonalising-lemma-2 P double-index-fun = let ⋃ = chain-complete P in
-  antisymmetric (pos P)
-    (lub2
-      (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun))
-      (λ {m} →
-        lub2
-          (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun m))
-          (λ {n} → dₘₙ≤⊔dₖₖ P double-index-fun)))
-    (lub2
-      (⋃ (fₖₖ-chain P double-index-fun))
-      (λ {n} →
-        transitive (pos P)
-          (lub1 (⋃ (chain-fₘₙ-with-n-fixed P double-index-fun n)) {n})
-          (lub1 (⋃ (chain-⊔fₖₙ-with-n-fixed P double-index-fun)))))
-\end{minted}
+We use \texttt{Eq.sym} to turn a proof that $a\equiv b$ to a proof that $b \equiv a$. Thus, the meat of the problem is providing the function body for \texttt{diagonalising-lemma-1} and \texttt{diagonalising-lemma-2}. Each is not hard to prove, but neither is trivial. We omit the details: it requires little more than translating the pen-and-paper approach to Agda. 
 \subsection{Continuous functions}
 All of the code in the \texttt{ContinuousFunctions} folder proves that certain functions are continuous. A simpler denotational semantics, where types correspond to sets, and functions in code merely to mathematical functions avoids almost all of this trouble. However, this is the price we pay for being able to work with fixed points and partial functions properly. Scott himself wrote, addressing this trouble ``Sorry about that! When one says what one means, one must demonstrate the correctness of one’s definitions." 
 \subsubsection{Continuity of the if-operator}
@@ -672,19 +534,19 @@ Of particular interest is how proving continuity in the first argument involves 
 
 The definition of \texttt{if-g} and the proofs of monotonicity in its first and second arguments are fairly easy, so we show them here:
 \begin{minted}{agda}
-if-g : ∀ {D} → A (pos (domain-product 𝔹⊥ (domain-product D D))) → A (pos D)
+if-g : ∀ {D} → domain-product 𝔹⊥ (domain-product D D) → D
 if-g {D} x with (x fzero)
 ...                     | inj false = x (fsucc fzero) (fsucc fzero)
 ...                     | inj true  = x (fsucc fzero) fzero
-...                     | ⊥₁        = least-element.⊥ (bottom D)
+...                     | ⊥₁        = ⊥ (bottom D)
 \end{minted}
 We define \texttt{if-g} by case-analysis on its first argument\footnote{\texttt{x} is a dependent product from a finite subset of the naturals, so \texttt{x} fzero just returns the first part of \texttt{x}.}. If false, then we take the second part of the second part of \texttt{if-g}'s argument, if true then the first of the second, and if bottom, then we return the bottom element of the appropriate domain. 
 \begin{minted}{agda}
 if-mon-first : (D : domain)
-  → ((b b′ : B⊥ Bool)
-  → (e : A (pos (domain-product D D)))
-  → (R (pos 𝔹⊥)) b b′
-  → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b′ e)))
+  → (b b′ : 𝔹⊥)
+  → (e : (domain-product D D))
+  → (R 𝔹⊥) b b′
+  → (R D) (if-g {D} (pair b e)) (if-g {D} (pair b′ e))
 
 if-mon-first {D} z≼n = ⊥-is-bottom (bottom D)
 if-mon-first {D} x≼x = reflexive (pos D)
@@ -694,10 +556,10 @@ We pattern-match on the proof that \texttt{b} and \texttt{b′} are related. Sin
 The second case is that \texttt{b} and \texttt{b′} are the same element, in which case so too are the output of \texttt{if-g {D} (pair b e)} and \texttt{if-g {D} (pair b′ e)}, so we can use reflexivity of relation in \texttt{D}. 
 \begin{minted}{agda}
 if-mon-second : (D : domain)
-  → ((b : B⊥ Bool)
-  → (e e′ : A (pos (domain-product D D)))
-  → (R (pos (domain-product D D))) e e′
-  → (R (pos D)) (if-g {D} (pair b e)) (if-g {D} (pair b e′)))
+  → ((b : 𝔹⊥)
+  → (e e′ : domain-product D D)
+  → (R (domain-product D D)) e e′
+  → (R D) (if-g {D} (pair b e)) (if-g {D} (pair b e′))
 if-mon-second D ⊥₁ e e′ e≤e′ = ⊥-is-bottom (bottom D)
 if-mon-second D (inj false) e e′ e≤e′ = e≤e′ (fsucc fzero) 
 if-mon-second D (inj true) e e′ e≤e′ = e≤e′ fzero
@@ -740,7 +602,9 @@ data Context : Set where
 We define our de Bruijn indices, analagously to the Peano (zero and succ) definition of the naturals. 
 \begin{minted}{agda}
 data _∋_ : Context → Type → Set where
-
+\end{minted}
+\begin{multicols}{2}
+\begin{minted}{agda}
   Z : ∀ {Γ A}
     → Γ , A ∋ A
 
@@ -748,9 +612,13 @@ data _∋_ : Context → Type → Set where
     → Γ ∋ A
     → Γ , B ∋ A
 \end{minted}
+\end{multicols}
 This is sufficient to now define our PCF representation of terms:
 \begin{minted}{agda}
 data _⊢_ : Context → Type → Set where
+\end{minted}
+\begin{multicols}{4}
+\begin{minted}{agda}
   `_ : ∀ {Γ A}
     → Γ ∋ A
     → Γ ⊢ A
@@ -795,6 +663,7 @@ data _⊢_ : Context → Type → Set where
     → Γ ⊢ A ⇒ A
     → Γ ⊢ A
 \end{minted}
+\end{multicols}
 Our terms are mostly self-explanatory. We call the term that corresponds to a de Bruijn index $n$ \texttt{` n}. We call the fix operator $\mu$, in keeping with some parts of the literature \cite{PLFA} \cite{Kozen}. Note that we are indebted heavily in this presentation to Wadler et al. \cite{PLFA}, from whom we have made only minor adjustments for defining PCF. 
 \subsection{Operational Semantics and Progress (and preservation for free)}
 \subsubsection{Operational Semantics}
@@ -808,6 +677,7 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → L · M —→ L′ · M
 \end{minted}
 We evaluate arguments to \texttt{pred}, \texttt{suc}, if-clauses and \texttt{is-zero} where possible:
+\begin{multicols}{2}
 \begin{minted}{agda}
   ξ-suc : ∀ {Γ} {M M′ : Γ ⊢ `ℕ}
     → M —→ M′
@@ -825,7 +695,9 @@ We evaluate arguments to \texttt{pred}, \texttt{suc}, if-clauses and \texttt{is-
     → M —→ M′
     → `is-zero M —→ `is-zero M′
 \end{minted}
+\end{multicols}
 We have the expected $\beta$-reductions for if-clauses:
+\begin{multicols}{2}
 \begin{minted}{agda}
   β-if₁ : ∀ {Γ A} {x y : Γ ⊢ A}
     → if `true then x else y —→ x
@@ -833,7 +705,9 @@ We have the expected $\beta$-reductions for if-clauses:
   β-if₂ : ∀ {Γ A} {x y : Γ ⊢ A}
     → if `false then x else y —→ y
 \end{minted}
+\end{multicols}
 Again, we have normal reductions for \texttt{pred} and \texttt{is-zero}. These $\beta$ rules only apply when the relevant other terms are fully evaluated. They thus require a proof of the relevant term being a value to be used. Note here also that we include \texttt{β-pred₁}: this is the departure from the course and Scott's version of PCF. 
+\begin{multicols}{2}
 \begin{minted}{agda}
   β-pred₁ : ∀ {Γ : Context}
     → `pred (`zero) —→ `zero {Γ}
@@ -849,6 +723,7 @@ Again, we have normal reductions for \texttt{pred} and \texttt{is-zero}. These $
     → Value M
     → `is-zero (`suc M) —→ `false 
 \end{minted}
+\end{multicols}
 Our most interesting two reduction rules are lambdas and the fix-operator. 
 
 We say that $\lambda N \cdot W$ steps to $N [W]$ where $[W]$\footnote{This is a separate function, that requires some care to define correctly. Wadler \cite{PLFA} covers the details and we more or less follow his approach, with subtle tweaks (in particular, our fix operator is not binding, and our contexts are indexed by elements of a finite set, rather than by naturals with a proof the natural isn't too large).} means that $W$ is substituted for the innermost de Bruijn index (i.e. this is the de Bruijn way of saying $(\lambda x. N) W \to N[W/x]$). This is therefore call-by-name evaluation, where the argument is not reduced before substitution. This is crucial for allowing the fix point operator to work correctly: otherwise the evaluation of $f (\text{fix} f)$ would involve first reducing $\text{fix} f$ to $f (\text{fix} f)$ and so the fixpoint operator would never terminate. 
@@ -865,7 +740,9 @@ Additionally, since we are using small step semantics, the definition of fix of 
 Having added the straightforward inductive definition of a value on this grammar to define the operational semantics anyway, we can state (and prove) a progress theorem: that all closed terms either reduce or are values. Note that this does not mean all terms reduce to a normal form and thus that all programs terminate: the language is turing-complete, and so not every program terminates. The progress theorem is proven by induction on the term (which is the same as induction on its type derivation!) and is not hard. I here state only its type signature:
 \begin{minted}{agda}
 data Progress {A} (M : ∅ ⊢ A) : Set where
-
+\end{minted}
+\begin{multicols}{2}
+\begin{minted}{agda}
   step : ∀ {N : ∅ ⊢ A}
     → M —→ N
     → Progress M
@@ -873,7 +750,9 @@ data Progress {A} (M : ∅ ⊢ A) : Set where
   done :
       Value M
     → Progress M
-
+\end{minted}
+\end{multicols}
+\begin{minted}{agda}
 progress : ∀ {A} → (M : ∅ ⊢ A) → Progress M
 \end{minted}
 Again, this closely follows Wadler \cite{PLFA}. 
@@ -980,17 +859,14 @@ soundness {A} (β-μ {N = N}) =
 \end{minted}
 Note that because we use small-step operational semantics, we prove that the denotation of (μ M) is identical of what it reduces to in one step: M · (μ M). The course notes instead have the hypothesis supplied by their big step semantics to justify a final line that equates these to whatever value they reduce to. The interesting step uses the lemma \texttt{lfp-is-fixed}, that the least fixed point of a function is a fixpoint. This is exactly as in the course notes: where this is called the ``fixed point property of \textit{fix}". 
 
-It should also be noted that often in these cases we are trying to prove the equality of two functions, which means we need to use one of three extensionality postulates we have regarding function equality. These all say that functions are equal iff their output is equal for all inputs. We need one each for normal functions from $A$ to $B$, dependent products from $a : A$ to $B(a)$, and continuous functions, from a domain $A$ to a domain $B$. Extensionality is not encoded into Agda but is known to be compatible with it \cite{PLFA}. In fact, the last of these postulates, for continuous functions, which we use above and is called \texttt{cont-fun-extensionality} may seem the most suspicious. Continuous functions are records, and it is hard to intuit what record equality should mean: if it means that each field is equal, does that mean we are claiming that all proofs of continuous functions' continuity are equal? 
-	
-To this we give two answers. Firstly, a pragmatic answer is that we use function domains. We thus need to show that we can make a domain out of the function space between domains, where each element is a continuous function. But that means we must show antisymmetry of the function space under some ordering, which ends up meaning that we must show that two continuous functions are equal, if their outputs are always equal. So, in a sense this postulate is unavoidable. Secondly, with more advanced machinery, using the language of HoTT, we can talk about the number of elements in types, and of ``propositions", types with only one inhabitant. It is a theorem, see e.g. \cite{De-Jong} that the proof types for continuous functions are propositions, and so in fact these record fields are guaranteed to be the same if the underlying function is the same.
-
-In short, we take what may seem a dubious shortcut, with the knowledge that it is a safe and justifiable one. 
+It should also be noted that often in these cases we are trying to prove the equality of two functions, which means we need to use one of three extensionality postulates we have regarding function equality. These all say that functions are equal iff their output is equal for all inputs. We need one each for normal functions from $A$ to $B$, dependent products from $a : A$ to $B(a)$, and continuous functions, from a domain $A$ to a domain $B$. Extensionality is not encoded into Agda but is known to be compatible with it \cite{PLFA}.
 \subsubsection{The case of lambdas}
 The case of lambdas and applications is one of several examples where things are extremely difficult to formalise, relative to convincing someone with pen and paper. There are approximately three times as many lines of code for proving the lambda case for soundness than all the other cases combined. The lecture notes mention a key substitution lemma, that states that
 \[
-\llbracket M' [M / x] \rrbracket = \llbracket \tau \vdash M\' \rrbracket ( \llbracket M \rrbracket).
+\llbracket M' [M / x] \rrbracket = \llbracket \tau \vdash M' \rrbracket ( \llbracket M \rrbracket).
 \]
-We introduce the similar lemma, generalised to terms with arbitrary contexts before them, and altered to fit our choice of using dependent products from finite sets, rather than iterated binary products. 
+We introduce the similar lemma, generalised to terms with arbitrary contexts before them, and altered slightly to fit our code. 
+
 Our lemma is:
 \begin{minted}{agda}
 substitution-lemma′ : ∀ {Γ} {τ τ′ : Type} → (M : Γ ⊢ τ) → (M′ : Γ , τ ⊢ τ′)
@@ -1074,6 +950,7 @@ That is, we obtain a proof that our evaluation gives a value, and that proof is 
 More generally with regard to semantics, we earlier claimed that the choice of small-step semantics had no downside (the benefit is that it allows for direct computation). We here present a proof that all the same evaluation rules still hold.
 
 First we define the transitive closure of our small-step semantics:
+\begin{multicols}{3}
 \begin{minted}{agda}
 data _-→*_ : ∀ {Γ} {A} → Γ ⊢ A → Γ ⊢ A → Set where
   refl-→* : ∀ {Γ} {A}
@@ -1092,6 +969,7 @@ data _-→*_ : ∀ {Γ} {A} → Γ ⊢ A → Γ ⊢ A → Set where
     → (t′ -→* t″)
     → (t -→* t″)
 \end{minted}
+\end{multicols}
 Then we define big-step reduction as a product type, with the first part being a proof that it is a composition of small-step reductions, and the second being a proof that the end term is a value:
 \begin{minted}{agda}
 _⇓_ : ∀ {Γ} {A} → (M : Γ ⊢ A) → (V : Γ ⊢ A) → Set
@@ -1104,9 +982,12 @@ Then we can define all our theorems, which are the big-step evaluations from the
 ⇓-pred : ∀ {Γ} {M : Γ ⊢ `ℕ} {V : Γ ⊢ `ℕ} → M ⇓ (`suc V) → (`pred M) ⇓ V
 ⇓-zero₁ : ∀ {Γ} {M : Γ ⊢ `ℕ} → M ⇓ `zero → (`is-zero M) ⇓ `true
 ⇓-zero₂ : ∀ {Γ} {M : Γ ⊢ `ℕ} {V : Γ ⊢ `ℕ} → M ⇓ (`suc V) → (`is-zero M) ⇓ `false
-⇓-if₁ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `true → M₂ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
-⇓-if₂ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `false → M₃ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
-⇓-cbn : ∀ {Γ} {A} {B} {M₁ : Γ ⊢ A ⇒ B} {M₁′ : Γ , A ⊢ B} {M₂ : Γ ⊢ A} {V : Γ ⊢ B} → M₁ ⇓ (ƛ M₁′) → (M₁′ [ M₂ ]) ⇓ V → (M₁ · M₂) ⇓ V 
+⇓-if₁ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `true
+  → M₂ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
+⇓-if₂ : ∀ {Γ} {A} {M₁ : Γ ⊢ `bool} {M₂ M₃ V : Γ ⊢ A} → M₁ ⇓ `false 
+  → M₃ ⇓ V → (if M₁ then M₂ else M₃) ⇓ V
+⇓-cbn : ∀ {Γ} {A} {B} {M₁ : Γ ⊢ A ⇒ B} {M₁′ : Γ , A ⊢ B} {M₂ : Γ ⊢ A} {V : Γ ⊢ B} 
+  → M₁ ⇓ (ƛ M₁′) → (M₁′ [ M₂ ]) ⇓ V → (M₁ · M₂) ⇓ V 
 ⇓-fix : ∀ {Γ} {A} {M : Γ ⊢ A ⇒ A} {V : Γ ⊢ A} → (M · (μ M)) ⇓ V → (μ M) ⇓ V
 \end{minted}
 The proofs require nothing sophisticated, but do use additional lemmas about congruence and inversion. We here demonstrate some examples of the needed lemmas. The proofs, once the lemmas are established, are all one-liners. 
