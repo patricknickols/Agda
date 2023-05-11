@@ -126,18 +126,18 @@ tarski-continuous {P} = record { mon = tarski-mon P
 scott-induction : {D : domain}
   → (f : cont-fun D D) (P : A (pos D) → Set)
   → P (⊥ (bottom D))
-  → ({n : ℕ} → (P (iterate n (g (mon f)) (⊥ (bottom D)))) → P (iterate (suc n) (g (mon f)) (⊥ (bottom D))))
+  → ({d : A (pos D)} → P d → P (g (mon f) d))
   → ((c : chain (pos D)) → ((n : ℕ) → (P (g c n))) → P (⊔ (chain-complete D c)))
   → P (g (tarski-mon D) f)
 
 scott-induction-1 : {D : domain}
   → (f : cont-fun D D) (P : A (pos D) → Set)
   → P (⊥ (bottom D))
-  → ({n : ℕ} → (P (iterate n (g (mon f)) (⊥ (bottom D)))) → P (iterate (suc n) (g (mon f)) (⊥ (bottom D))))
+  → ({d : A (pos D)} → P d → P (g (mon f) d))
   → ((n : ℕ) → P (iterate n (g (mon f)) (⊥ (bottom D))))
 
 scott-induction-1 f P P⊥ induction zero = P⊥
-scott-induction-1 f P P⊥ induction (suc n) = induction {n} (scott-induction-1 f P P⊥ (λ {n} → induction {n}) n)
+scott-induction-1 {D} f P P⊥ induction (suc n) = induction {iterate n (g (mon f)) (⊥ (bottom D))} (scott-induction-1 {D} f P P⊥ induction n)
 
 scott-induction {D} f P P⊥ induction chain-closed = chain-closed (tarski-chain-of-fⁿ⊥ D f) (scott-induction-1 f P P⊥ λ {n} → induction {n})
 
